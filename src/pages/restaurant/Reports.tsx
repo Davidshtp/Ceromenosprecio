@@ -7,7 +7,8 @@ import {
   Calendar,
   Download,
 } from "lucide-react";
-import { Card, Button, Loading } from "../../components/ui";
+import { toast } from "sonner";
+import { Card, Button, Loading, Alert } from "../../components/ui";
 import {
   LineChart,
   Line,
@@ -35,10 +36,19 @@ interface ReportData {
   orderTypeDistribution: { type: string; count: number }[];
 }
 
+const ORDER_TYPE_LABELS: Record<string, string> = {
+  delivery: "Domicilio",
+  pickup: "Recoger en tienda",
+  qr: "QR / Mesa",
+  counter: "Venta local",
+  unknown: "Otro",
+};
+
 const Reports: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [dateRange, setDateRange] = useState<"7" | "30" | "90">("30");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     fetchReportData();
@@ -46,39 +56,42 @@ const Reports: React.FC = () => {
 
   const fetchReportData = async () => {
     setLoading(true);
+    setError("");
     try {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!user.restaurant_id) return;
+      if (!user.restaurant_id) {
+        setError("No se encontró el restaurante.");
+        setLoading(false);
+        return;
+      }
 
       const daysAgo = parseInt(dateRange);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysAgo);
 
-      // Fetch orders
-      const { data: orders, error } = await supabase
+      const { data: orders, error: fetchError } = await supabase
         .from("orders")
         .select("*")
         .eq("restaurant_id", user.restaurant_id)
         .gte("created_at", startDate.toISOString())
         .in("status", ["completed", "ready", "preparing"]);
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
-      // Calculate metrics
       const totalRevenue =
-        orders?.reduce((sum, order) => sum + order.total_amount, 0) || 0;
+        orders?.reduce((sum, order) => sum + Number(order.total || 0), 0) || 0;
       const totalOrders = orders?.length || 0;
       const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
       // Top items
       const itemCounts: Record<string, { count: number; revenue: number }> = {};
       orders?.forEach((order) => {
-        order.items?.forEach((item: any) => {
+        (order.items || []).forEach((item: any) => {
           if (!itemCounts[item.name]) {
             itemCounts[item.name] = { count: 0, revenue: 0 };
           }
-          itemCounts[item.name].count += item.quantity;
-          itemCounts[item.name].revenue += item.item_total;
+          itemCounts[item.name].count += Number(item.quantity || 0);
+          itemCounts[item.name].revenue += Number(item.item_total || 0);
         });
       });
 
@@ -90,20 +103,20 @@ const Reports: React.FC = () => {
       // Daily revenue
       const dailyData: Record<string, { revenue: number; orders: number }> = {};
       orders?.forEach((order) => {
-        const date = new Date(order.created_at).toLocaleDateString("en-US", {
+        const date = new Date(order.created_at).toLocaleDateString("es-CO", {
           month: "short",
           day: "numeric",
         });
         if (!dailyData[date]) {
           dailyData[date] = { revenue: 0, orders: 0 };
         }
-        dailyData[date].revenue += order.total_amount;
+        dailyData[date].revenue += Number(order.total || 0);
         dailyData[date].orders += 1;
       });
 
       const dailyRevenue = Object.entries(dailyData)
         .map(([date, data]) => ({ date, ...data }))
-        .slice(-14); // Last 14 days
+        .slice(-14);
 
       // Order type distribution
       const typeCounts: Record<string, number> = {};
@@ -112,9 +125,10 @@ const Reports: React.FC = () => {
         typeCounts[type] = (typeCounts[type] || 0) + 1;
       });
 
-      const orderTypeDistribution = Object.entries(typeCounts).map(
-        ([type, count]) => ({ type, count })
-      );
+      const orderTypeDistribution = Object.entries(typeCounts).map(([type, count]) => ({
+        type: ORDER_TYPE_LABELS[type] || type,
+        count,
+      }));
 
       setReportData({
         totalRevenue,
@@ -124,8 +138,10 @@ const Reports: React.FC = () => {
         dailyRevenue,
         orderTypeDistribution,
       });
-    } catch (error) {
-      console.error("Error fetching report data:", error);
+    } catch (err) {
+      console.error("Error fetching report data:", err);
+      setError("No se pudieron cargar los reportes.");
+      toast.error("No se pudieron cargar los reportes.");
     } finally {
       setLoading(false);
     }
@@ -141,11 +157,7 @@ const Reports: React.FC = () => {
       ["Valor promedio del pedido", formatCurrency(reportData.avgOrderValue)],
       [""],
       ["Productos principales", "Cantidad", "Ingresos"],
-      ...reportData.topItems.map((item) => [
-        item.name,
-        item.count.toString(),
-        formatCurrency(item.revenue),
-      ]),
+      ...reportData.topItems.map((item) => [item.name, item.count.toString(), formatCurrency(item.revenue)]),
     ]
       .map((row) => row.join(","))
       .join("\n");
@@ -154,12 +166,16 @@ const Reports: React.FC = () => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `report-${dateRange}-days.csv`;
+    a.download = `reporte-${dateRange}-dias.csv`;
     a.click();
   };
 
   if (loading) {
     return <Loading text="Cargando reportes..." />;
+  }
+
+  if (error) {
+    return <Alert type="error" message={error} />;
   }
 
   if (!reportData) {
@@ -173,38 +189,37 @@ const Reports: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-text mb-2">
-            Reportes y analítica
-          </h2>
-          <p className="text-text-secondary">
-            Consulta el rendimiento y las tendencias de tus ventas
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <select
-            value={dateRange}
-            onChange={(e) => setDateRange(e.target.value as "7" | "30" | "90")}
-            className="input"
-          >
-            <option value="7">Últimos 7 días</option>
-            <option value="30">Últimos 30 días</option>
-            <option value="90">Últimos 90 días</option>
-          </select>
-          <Button
-            icon={<Download className="w-5 h-5" />}
-            onClick={exportReport}
-            variant="outline"
-          >
-            Exportar
-          </Button>
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Package className="w-8 h-8 text-accent" />
+            <div>
+              <h2 className="text-2xl font-bold text-text">Reportes y analítica</h2>
+              <p className="text-sm text-text-secondary">
+                Consulta el rendimiento y las tendencias de tus ventas
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              value={dateRange}
+              onChange={(e) => setDateRange(e.target.value as "7" | "30" | "90")}
+              className="input w-auto"
+            >
+              <option value="7">Últimos 7 días</option>
+              <option value="30">Últimos 30 días</option>
+              <option value="90">Últimos 90 días</option>
+            </select>
+            <Button icon={<Download className="w-4 h-4" />} onClick={exportReport} variant="outline" size="sm">
+              Exportar CSV
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="rounded-2xl shadow-sm border border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="p-3 bg-success/10 rounded-lg">
               <DollarSign className="w-6 h-6 text-success" />
@@ -217,7 +232,7 @@ const Reports: React.FC = () => {
           <p className="text-text-secondary text-sm">Ingresos totales</p>
         </Card>
 
-        <Card>
+        <Card className="rounded-2xl shadow-sm border border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="p-3 bg-accent/10 rounded-lg">
               <ShoppingBag className="w-6 h-6 text-accent" />
@@ -229,7 +244,7 @@ const Reports: React.FC = () => {
           <p className="text-text-secondary text-sm">Pedidos totales</p>
         </Card>
 
-        <Card>
+        <Card className="rounded-2xl shadow-sm border border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="p-3 bg-accent-secondary/10 rounded-lg">
               <DollarSign className="w-6 h-6 text-accent-secondary" />
@@ -241,7 +256,7 @@ const Reports: React.FC = () => {
           <p className="text-text-secondary text-sm">Valor promedio del pedido</p>
         </Card>
 
-        <Card>
+        <Card className="rounded-2xl shadow-sm border border-border">
           <div className="flex items-center justify-between mb-3">
             <div className="p-3 bg-warning/10 rounded-lg">
               <Calendar className="w-6 h-6 text-warning" />
@@ -255,69 +270,76 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Revenue Trend */}
-        <Card>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="rounded-2xl shadow-sm border border-border">
           <h3 className="text-lg font-bold text-text mb-4">Tendencia de ingresos</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={reportData.dailyRevenue}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis dataKey="date" stroke="#6b7280" />
-              <YAxis stroke="#6b7280" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "#fff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                }}
-                formatter={(value: number) => formatCurrency(value)}
-              />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#FF6B6B"
-                strokeWidth={2}
-                name="Ingresos"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {reportData.dailyRevenue.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-text-secondary">
+              Sin datos para este periodo
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={reportData.dailyRevenue}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="date" stroke="#6b7280" />
+                <YAxis stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => formatCurrency(value)}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#FF6B6B"
+                  strokeWidth={2}
+                  name="Ingresos"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </Card>
 
-        {/* Order Type Distribution */}
-        <Card>
+        <Card className="rounded-2xl shadow-sm border border-border">
           <h3 className="text-lg font-bold text-text mb-4">
             Distribución por tipo de pedido
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={reportData.orderTypeDistribution}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry: any) =>
-                  `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`
-                }
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="count"
-              >
-                {reportData.orderTypeDistribution.map((_entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {reportData.orderTypeDistribution.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-text-secondary">
+              Sin datos para este periodo
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={reportData.orderTypeDistribution}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry: any) =>
+                    `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`
+                  }
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="count"
+                >
+                  {reportData.orderTypeDistribution.map((_entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
       {/* Top Items */}
-      <Card>
+      <Card className="rounded-2xl shadow-sm border border-border">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-text">Productos más vendidos</h3>
           <Package className="w-5 h-5 text-accent" />
@@ -340,9 +362,7 @@ const Reports: React.FC = () => {
                   </div>
                   <div>
                     <div className="font-semibold text-text">{item.name}</div>
-                    <div className="text-sm text-text-secondary">
-                      {item.count} pedidos
-                    </div>
+                    <div className="text-sm text-text-secondary">{item.count} pedidos</div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -358,24 +378,30 @@ const Reports: React.FC = () => {
       </Card>
 
       {/* Daily Orders Chart */}
-      <Card>
+      <Card className="rounded-2xl shadow-sm border border-border">
         <h3 className="text-lg font-bold text-text mb-4">Pedidos diarios</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={reportData.dailyRevenue}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-            <XAxis dataKey="date" stroke="#6b7280" />
-            <YAxis stroke="#6b7280" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "8px",
-              }}
-            />
-            <Legend />
-            <Bar dataKey="orders" fill="#4ECDC4"             name="Pedidos" />
-          </BarChart>
-        </ResponsiveContainer>
+        {reportData.dailyRevenue.length === 0 ? (
+          <div className="flex items-center justify-center h-[300px] text-text-secondary">
+            Sin datos para este periodo
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={reportData.dailyRevenue}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="date" stroke="#6b7280" />
+              <YAxis stroke="#6b7280" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#fff",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "8px",
+                }}
+              />
+              <Legend />
+              <Bar dataKey="orders" fill="#4ECDC4" name="Pedidos" />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </Card>
     </div>
   );

@@ -1,23 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Download, QrCode as QrCodeIcon, ExternalLink } from "lucide-react";
-import {
-  Card,
-  Button,
-  Loading,
-  Alert,
-  Textarea,
-} from "../../components/ui";
+import { Download, QrCode as QrCodeIcon, ExternalLink, Clock, Package, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
+import { Card, Button, Loading, Alert, Textarea, Input } from "../../components/ui";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "../../config/supabase";
-import type {
-  Restaurant,
-  RestaurantHours,
-  RestaurantSettings as RestaurantSettingsData,
-} from "../../config/supabase";
-import {
-  getRestaurantSettings,
-  saveRestaurantSettings,
-} from "../../services/restaurantService";
+import type { Restaurant, RestaurantHours, RestaurantSettings as RestaurantSettingsData } from "../../config/supabase";
+import { getRestaurantSettings, saveRestaurantSettings } from "../../services/restaurantService";
 
 const RestaurantSettings: React.FC = () => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -52,6 +40,8 @@ const RestaurantSettings: React.FC = () => {
             restaurant_id: user.restaurant_id,
             display_name: data.name,
             description: "",
+            whatsapp: "",
+            instagram_url: "",
             primary_color: "#111827",
             secondary_color: "#F59E0B",
             delivery_enabled: true,
@@ -91,8 +81,10 @@ const RestaurantSettings: React.FC = () => {
     setSaving(false);
 
     if (result.error) {
-      setError(result.error.message);
+      toast.error("No se pudo guardar la configuración.");
+      return;
     }
+    toast.success("Configuración guardada correctamente.");
   };
 
   const downloadQRCode = () => {
@@ -130,86 +122,60 @@ const RestaurantSettings: React.FC = () => {
   }
 
   const menuUrl = `${window.location.origin}/menu/${restaurant.slug}`;
+  const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="mb-1 text-2xl font-bold text-text">Configuración</h2>
-        <p className="text-sm text-text-secondary">
-        Administra el código QR, los horarios y las formas de atención.
-        </p>
+      <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Package className="w-8 h-8 text-accent" />
+          <div>
+            <h2 className="text-2xl font-bold text-text">Configuración</h2>
+            <p className="text-sm text-text-secondary">
+              Administra el código QR, horarios, redes sociales y formas de atención.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* QR Code Section */}
-      <Card>
-        <div className="flex items-start space-x-2 mb-4">
-          <QrCodeIcon className="w-6 h-6 text-accent" />
+      <Card className="rounded-2xl shadow-sm border border-border">
+        <div className="flex items-start gap-4 p-6">
+          <QrCodeIcon className="w-6 h-6 text-accent mt-1" />
           <div>
             <h3 className="text-lg font-bold text-text">Código QR del menú</h3>
-            <p className="text-text-secondary text-sm">
+            <p className="text-sm text-text-secondary">
               Tus clientes pueden escanearlo para abrir el menú digital.
             </p>
           </div>
         </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* QR Code Display */}
-          <div className="flex flex-col items-center space-y-4">
-            <div className="bg-white p-6 rounded-lg shadow-md">
-              <QRCodeSVG
-                id="qr-code-svg"
-                value={menuUrl}
-                size={256}
-                level="H"
-                includeMargin={true}
-              />
+        <div className="grid gap-6 p-6 pt-0 md:grid-cols-2">
+          <div className="flex flex-col items-center gap-4">
+            <div className="bg-white p-4 rounded-xl shadow-sm">
+              <QRCodeSVG id="qr-code-svg" value={menuUrl} size={200} level="H" includeMargin={true} />
             </div>
-
-            <Button
-              icon={<Download className="w-5 h-5" />}
-              onClick={downloadQRCode}
-              fullWidth
-            >
+            <Button icon={<Download className="w-4 h-4" />} onClick={downloadQRCode} fullWidth size="sm">
               Descargar código QR
             </Button>
           </div>
-
-          {/* QR Code Info */}
           <div className="space-y-4">
             <div>
               <label className="label mb-2">Enlace del menú</label>
-              <div className="p-3 bg-bg-subtle rounded-lg break-all text-text-secondary text-sm">
+              <div className="p-3 bg-bg-subtle rounded-lg break-all text-sm text-text-secondary border border-border">
                 {menuUrl}
               </div>
               <a
                 href={menuUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center space-x-1 text-accent hover:text-accent-secondary mt-2 text-sm"
+                className="inline-flex items-center gap-1 text-sm text-accent hover:text-accent-secondary mt-2"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Abrir menú público</span>
+                Abrir menú público
               </a>
             </div>
-
-            <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-              <h4 className="font-semibold text-text mb-2">Cómo usarlo:</h4>
-              <ol className="space-y-2 text-text-secondary text-sm">
-                <li>1. Descarga la imagen del código QR.</li>
-                <li>2. Imprímela y ubícala en mesas, mostrador o entrada.</li>
-                <li>3. Tus clientes la escanean con la cámara del celular.</li>
-                <li>4. Accederán inmediatamente al menú actualizado.</li>
-              </ol>
-            </div>
-
-            <div className="bg-success/10 border border-success/20 rounded-lg p-4">
-              <p className="text-success text-sm">
-                ✓ El menú se actualiza automáticamente en tiempo real.
-              </p>
-              <p className="text-success text-sm">
-                ✓ Tus clientes no necesitan instalar ninguna aplicación.
-              </p>
+            <div className="rounded-lg border border-success/20 bg-success/10 p-4 text-sm text-success">
+              <p>✓ El menú se actualiza automáticamente en tiempo real.</p>
+              <p>✓ Tus clientes no necesitan instalar ninguna aplicación.</p>
             </div>
           </div>
         </div>
@@ -217,115 +183,198 @@ const RestaurantSettings: React.FC = () => {
 
       {settings && (
         <form onSubmit={saveSettings} className="space-y-6">
-          <Card>
-            <h3 className="mb-1 text-lg font-bold text-text">Formas de atención</h3>
-            <p className="mb-4 text-sm text-text-secondary">
-              Elige cómo pueden recibir los pedidos tus clientes.
-            </p>
-            <div className="flex flex-wrap gap-4 text-sm text-text">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={settings.delivery_enabled}
-                  onChange={(event) => setSettings({ ...settings, delivery_enabled: event.target.checked })} />
-                Domicilios
+          <Card className="rounded-2xl shadow-sm border border-border">
+            <div className="flex items-start gap-4 p-6">
+              <Clock className="w-6 h-6 text-accent mt-1" />
+              <div>
+                <h3 className="text-lg font-bold text-text">Formas de atención</h3>
+                <p className="text-sm text-text-secondary">Elige cómo pueden recibir los pedidos tus clientes.</p>
+              </div>
+            </div>
+            <div className="grid gap-3 p-6 pt-0 md:grid-cols-2">
+              <label className="flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-bg-subtle cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.delivery_enabled}
+                  onChange={(e) =>
+                    setSettings({ ...(settings as RestaurantSettingsData), delivery_enabled: e.target.checked })
+                  }
+                  className="h-5 w-5 rounded text-primary"
+                />
+                <div>
+                  <span className="block font-medium text-text">Domicilios</span>
+                  <span className="text-xs text-text-secondary">Recibe pedidos a domicilio</span>
+                </div>
               </label>
-              <label className="flex items-center gap-2">
-                <input type="checkbox" checked={settings.pickup_enabled}
-                  onChange={(event) => setSettings({ ...settings, pickup_enabled: event.target.checked })} />
-                Recoger en el restaurante
+              <label className="flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-bg-subtle cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.pickup_enabled}
+                  onChange={(e) =>
+                    setSettings({ ...(settings as RestaurantSettingsData), pickup_enabled: e.target.checked })
+                  }
+                  className="h-5 w-5 rounded text-primary"
+                />
+                <div>
+                  <span className="block font-medium text-text">Recoger en tienda</span>
+                  <span className="text-xs text-text-secondary">Tus clientes recogen en el restaurante</span>
+                </div>
               </label>
             </div>
           </Card>
 
-          <Card>
-            <h3 className="mb-1 text-lg font-bold text-text">Estado del menú</h3>
-            <p className="mb-4 text-sm text-text-secondary">
-              Puedes cerrar temporalmente el menú cuando no estés recibiendo pedidos.
-            </p>
-            <label className="flex items-center gap-2 text-sm text-text">
-              <input
-                type="checkbox"
-                checked={settings.is_temporarily_closed}
-                onChange={(event) =>
-                  setSettings({
-                    ...settings,
-                    is_temporarily_closed: event.target.checked,
-                  })
-                }
-              />
-              Mostrar menú temporalmente cerrado
-            </label>
-            <Textarea
-              label="Mensaje de cierre"
-              value={settings.closed_message}
-              onChange={(event) =>
-                setSettings({ ...settings, closed_message: event.target.value })
-              }
-              rows={2}
-            />
+          <Card className="rounded-2xl shadow-sm border border-border">
+            <div className="flex items-start gap-4 p-6">
+              <MessageCircle className="w-6 h-6 text-accent mt-1" />
+              <div>
+                <h3 className="text-lg font-bold text-text">Redes sociales</h3>
+                <p className="text-sm text-text-secondary">Aparecerán en el menú de tus clientes.</p>
+              </div>
+            </div>
+            <div className="grid gap-4 p-6 pt-0 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-text">WhatsApp</label>
+                <Input
+                  value={settings.whatsapp || ""}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), whatsapp: e.target.value })}
+                  placeholder="3000000000"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-text">Instagram</label>
+                <Input
+                  value={settings.instagram_url || ""}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), instagram_url: e.target.value })}
+                  placeholder="https://instagram.com/tu_restaurante"
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <label className="text-sm font-medium text-text">Dirección del restaurante</label>
+                <Input
+                  value={settings.address || ""}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), address: e.target.value })}
+                  placeholder="Calle, número, barrio..."
+                />
+              </div>
+            </div>
           </Card>
 
-          <Card>
-            <h3 className="mb-1 text-lg font-bold text-text">Horario de atención</h3>
-            <p className="mb-4 text-sm text-text-secondary">Define cuándo recibes pedidos.</p>
-            <div className="space-y-3">
-              {hours.map((hour) => (
-                <div
-                  key={hour.day_of_week}
-                  className="grid grid-cols-[1fr_auto_1fr_1fr] gap-3 items-center"
-                >
-                  <span className="text-sm font-medium text-text">
-                    {["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"][hour.day_of_week]}
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={hour.is_open}
-                    onChange={(event) =>
-                      setHours((current) =>
-                        current.map((item) =>
-                          item.day_of_week === hour.day_of_week
-                            ? { ...item, is_open: event.target.checked }
-                            : item
-                        )
-                      )
-                    }
-                  />
-                  <input
-                    type="time"
-                    disabled={!hour.is_open}
-                    value={hour.opening_time || ""}
-                    onChange={(event) =>
-                      setHours((current) =>
-                        current.map((item) =>
-                          item.day_of_week === hour.day_of_week
-                            ? { ...item, opening_time: event.target.value }
-                            : item
-                        )
-                      )
-                    }
-                    className="input"
-                  />
-                  <input
-                    type="time"
-                    disabled={!hour.is_open}
-                    value={hour.closing_time || ""}
-                    onChange={(event) =>
-                      setHours((current) =>
-                        current.map((item) =>
-                          item.day_of_week === hour.day_of_week
-                            ? { ...item, closing_time: event.target.value }
-                            : item
-                        )
-                      )
-                    }
-                    className="input"
-                  />
+          <Card className="rounded-2xl shadow-sm border border-border">
+            <div className="flex items-start gap-4 p-6">
+              <Package className="w-6 h-6 text-accent mt-1" />
+              <div>
+                <h3 className="text-lg font-bold text-text">Estado del menú</h3>
+                <p className="text-sm text-text-secondary">Cierra temporalmente cuando no estés recibiendo pedidos.</p>
+              </div>
+            </div>
+            <div className="p-6 pt-0 space-y-4">
+              <label className="flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-bg-subtle cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={settings.is_temporarily_closed}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), is_temporarily_closed: e.target.checked })}
+                  className="h-5 w-5 rounded text-primary"
+                />
+                <div>
+                  <span className="block font-medium text-text">Mostrar menú temporalmente cerrado</span>
+                  <span className="text-xs text-text-secondary">Los clientes verán un aviso de cerrado</span>
                 </div>
-              ))}
+              </label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-text">Mensaje de cierre</label>
+                <Textarea
+                  value={settings.closed_message || ""}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), closed_message: e.target.value })}
+                  placeholder="Estamos cerrados, vuelve pronto."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </Card>
+
+          <Card className="rounded-2xl shadow-sm border border-border">
+            <div className="flex items-start gap-4 p-6">
+              <Clock className="w-6 h-6 text-accent mt-1" />
+              <div>
+                <h3 className="text-lg font-bold text-text">Horario de atención</h3>
+                <p className="text-sm text-text-secondary">Define cuándo recibes pedidos.</p>
+              </div>
+            </div>
+            <div className="p-6 pt-0">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-border">
+                  <thead>
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Día</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Abierto</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Apertura</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Cierre</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {hours.map((hour) => {
+                      const dayName = days[hour.day_of_week];
+                      return (
+                        <tr key={hour.day_of_week}>
+                          <td className="px-4 py-3 text-sm font-medium text-text">{dayName}</td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={hour.is_open}
+                              onChange={(e) =>
+                                setHours((current) =>
+                                  current.map((item) =>
+                                    item.day_of_week === hour.day_of_week ? { ...item, is_open: e.target.checked } : item
+                                  )
+                                )
+                              }
+                              className="h-4 w-4 rounded text-primary"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="time"
+                              disabled={!hour.is_open}
+                              value={hour.opening_time || ""}
+                              onChange={(e) =>
+                                setHours((current) =>
+                                  current.map((item) =>
+                                    item.day_of_week === hour.day_of_week ? { ...item, opening_time: e.target.value } : item
+                                  )
+                                )
+                              }
+                              className="input w-full disabled:opacity-50"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <input
+                              type="time"
+                              disabled={!hour.is_open}
+                              value={hour.closing_time || ""}
+                              onChange={(e) =>
+                                setHours((current) =>
+                                  current.map((item) =>
+                                    item.day_of_week === hour.day_of_week ? { ...item, closing_time: e.target.value } : item
+                                  )
+                                )
+                              }
+                              className="input w-full disabled:opacity-50"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </Card>
 
           <div className="flex justify-end">
-            <Button type="submit" loading={saving}>
+            <Button type="submit" loading={saving} size="lg">
               Guardar configuración
             </Button>
           </div>

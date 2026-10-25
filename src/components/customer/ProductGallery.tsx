@@ -6,9 +6,14 @@ import type { ProductImage } from "../../config/supabase";
 interface ProductGalleryProps {
   images: ProductImage[];
   productName: string;
+  imageFit?: "cover" | "contain";
 }
 
-export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productName }) => {
+export const ProductGallery: React.FC<ProductGalleryProps> = ({
+  images,
+  productName,
+  imageFit = "cover",
+}) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const touchStartX = useRef<number | null>(null);
@@ -115,7 +120,9 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({ images, productN
           <img
             src={mainImage.url}
             alt={`${productName} ${safeIndex + 1}`}
-            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+            className={`h-full w-full transition-transform duration-700 group-hover:scale-[1.02] ${
+              imageFit === "contain" ? "object-contain" : "object-cover"
+            }`}
             loading="eager"
             decoding="async"
           />

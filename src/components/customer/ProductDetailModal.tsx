@@ -58,17 +58,17 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const canAdd = restaurantIsOpen && item.is_available && quantity > 0;
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      position="bottom"
-      size="xl"
-      showCloseButton={false}
-      contentClassName="p-0"
-    >
-      <div className="relative flex h-[88dvh] min-h-0 flex-col lg:grid lg:h-[min(760px,88vh)] lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        position="bottom"
+        size="xl"
+        showCloseButton={false}
+        contentClassName="p-0"
+      >
+        <div className="relative flex h-[88dvh] min-h-0 flex-col lg:grid lg:h-[min(760px,88vh)] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)] lg:grid-rows-[minmax(0,1fr)]">
         <div className="relative shrink-0 lg:h-full">
-          <ProductGallery images={images} productName={item.name} />
+          <ProductGallery images={images} productName={item.name} imageFit="contain" />
           <button
             type="button"
             onClick={onClose}
@@ -78,8 +78,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="flex min-h-0 flex-1 flex-col lg:h-full">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="flex min-h-0 flex-1 flex-col lg:h-full relative">
+          <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
             <div className="flex flex-col gap-6 p-5 pb-6 sm:p-7 sm:pb-7">
               <div>
                 {item.category_name && (

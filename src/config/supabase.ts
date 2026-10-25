@@ -63,6 +63,7 @@ export interface RestaurantSettings {
   secondary_color: string;
   phone?: string;
   whatsapp?: string;
+  instagram_url?: string;
   address?: string;
   delivery_enabled: boolean;
   pickup_enabled: boolean;

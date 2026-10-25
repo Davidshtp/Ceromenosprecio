@@ -11,6 +11,7 @@ interface ProductCardProps {
   onOpen: (item: MenuItem) => void;
   onAdd: (item: MenuItem) => void;
   onRemove: (item: MenuItem) => void;
+  primaryColor?: string;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -20,6 +21,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onOpen,
   onAdd,
   onRemove,
+  primaryColor = "#000000",
 }) => {
   const images = useMemo(() => getProductImages(item), [item]);
   const cover = images[0]?.url;
@@ -59,7 +61,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       tabIndex={0}
       onClick={() => onOpen(item)}
       onKeyDown={handleKeyDown}
-      className="group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-accent/40"
+      className={`group flex h-full cursor-pointer flex-col overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.04] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-[#${primaryColor}]/50`}
       aria-label={`Ver ${item.name}`}
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-bg-subtle">
@@ -116,19 +118,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   type="button"
                   disabled={!canAdd}
                   onClick={handleAdd}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-accent px-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-accent/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3"
+                  className={`inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-[#${primaryColor}] px-2.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-[#${primaryColor}]/90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:px-3`}
                   aria-label={hasVariations ? `Elegir opciones de ${item.name}` : `Agregar ${item.name} al carrito`}
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Agregar</span>
                 </button>
               ) : (
-                <div className="flex items-center overflow-hidden rounded-xl bg-accent text-white">
+                <div className={`flex items-center overflow-hidden rounded-xl bg-[#${primaryColor}] text-white`}>
                   <button
                     type="button"
                     onClick={handleRemove}
                     disabled={!restaurantIsOpen}
-                    className="p-2 transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    className={`p-2 transition-colors hover:bg-[#${primaryColor}]/80 disabled:opacity-50`}
                     aria-label={`Quitar una unidad de ${item.name}`}
                   >
                     <Minus className="h-3.5 w-3.5" />
@@ -138,7 +140,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     type="button"
                     disabled={!canAdd}
                     onClick={handleAdd}
-                    className="p-2 transition-colors hover:bg-accent-hover disabled:opacity-50"
+                    className={`p-2 transition-colors hover:bg-[#${primaryColor}]/80 disabled:opacity-50`}
                     aria-label={hasVariations ? `Elegir opciones de ${item.name}` : `Agregar otra unidad de ${item.name}`}
                   >
                     <Plus className="h-3.5 w-3.5" />
