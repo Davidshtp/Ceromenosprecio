@@ -1,12 +1,30 @@
-  import React, { useCallback, useEffect, useMemo, useState } from "react";
-  import { useParams } from "react-router-dom";
-  import { ShoppingCart, Plus, Minus, X, Search, CheckCircle, Package, MessageCircle, Instagram, Clock } from "lucide-react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  X,
+  Search,
+  CheckCircle,
+  Package,
+  MessageCircle,
+  Instagram,
+  Clock,
+} from "lucide-react";
 import { Card, Button, Input, Modal, Loading, Alert } from "../../components/ui";
 import { subscribeToMenuItems, createOrder } from "../../services/restaurantService";
-import type { MenuItem, MenuItemOption, RestaurantSettings, RestaurantHours, Restaurant } from "../../config/supabase";
+import type {
+  MenuItem,
+  MenuItemOption,
+  RestaurantSettings,
+  RestaurantHours,
+  Restaurant,
+} from "../../config/supabase";
 import { formatCurrency, isValidPhone } from "../../utils/helpers";
 import { supabase } from "../../config/supabase";
 import { getAddonsKey } from "../../utils/menuItem";
+import { buildWhatsAppMessage } from "../../utils/whatsappMessages";
 import { ProductCard } from "../../components/customer/ProductCard";
 import { ProductDetailModal } from "../../components/customer/ProductDetailModal";
 import { toast } from "sonner";
@@ -66,9 +84,7 @@ const CustomerMenu: React.FC = () => {
     setHours(hoursData || []);
   }, [slug]);
 
-  // Load restaurant and menu
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadRestaurant();
   }, [slug, loadRestaurant]);
 
@@ -119,20 +135,27 @@ const CustomerMenu: React.FC = () => {
 
   const restaurantIsOpen = isOpenNow();
 
-  const restaurantName = settings?.display_name || restaurant?.name;
+  const restaurantName = settings?.display_name || "";
   const restaurantLogo = settings?.logo_url || restaurant?.logo_url;
-  const primaryColor = settings?.primary_color || "#000000";
-  const secondaryColor = settings?.secondary_color || "#6366F1";
+  const primaryColor = "#000000";
+  const secondaryColor = "#6366F1";
 
   const whatsappLink = useMemo(() => {
     if (!settings?.whatsapp) return null;
     const digits = settings.whatsapp.replace(/[^0-9]/g, "");
     if (!digits) return null;
-    const message = encodeURIComponent(
-      `Hola, te escribo desde el menú de ${restaurantName}. Me gustaría hacer una consulta.`
-    );
-    return `https://wa.me/${digits}?text=${message}`;
-  }, [settings?.whatsapp, restaurantName]);
+    return digits;
+  }, [settings?.whatsapp]);
+
+  const openWhatsApp = () => {
+    if (!whatsappLink) return;
+    const message = buildWhatsAppMessage({
+      type: "menu_contact",
+      restaurantName: restaurantName || restaurant?.name || "Cero Menosprecio",
+    });
+    const url = `https://api.whatsapp.com/send?phone=${whatsappLink}&text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const instagramLink = useMemo(() => {
     if (!settings?.instagram_url) return null;
@@ -213,6 +236,7 @@ const CustomerMenu: React.FC = () => {
 
     setShowItemModal(false);
     setSelectedItem(null);
+    toast.success("Agregado al carrito");
   };
 
   const updateQuantity = (index: number, delta: number) => {
@@ -238,7 +262,7 @@ const CustomerMenu: React.FC = () => {
   };
 
   if (loading) {
-    return <Loading text="Loading menu..." />;
+    return <Loading text="Cargando menú..." />;
   }
 
   if (!restaurant) {
@@ -250,8 +274,7 @@ const CustomerMenu: React.FC = () => {
             Restaurante no encontrado
           </h2>
           <p className="text-text-secondary">
-            El restaurante que buscas no existe o está inactivo
-            inactive.
+            El restaurante que buscas no existe o está inactivo.
           </p>
         </Card>
       </div>
@@ -281,154 +304,143 @@ const CustomerMenu: React.FC = () => {
 
   return (
     <div
-      className="mono-interface min-h-screen bg-bg-subtle pb-20"
+      className="mono-interface min-h-screen bg-bg pb-24"
       style={styleVars}
     >
-      {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-screen-lg mx-auto px-3 py-2 sm:px-4 sm:py-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              {restaurantLogo && (
-                <img
-                  src={restaurantLogo}
-                  alt={restaurantName}
-                  className="h-16 w-16 sm:h-24 sm:w-24 md:h-32 md:w-32 object-contain shrink-0"
-                />
-              )}
-              <div className="min-w-0">
-                <h1 className="font-bold text-base sm:text-lg text-text leading-tight">
-                  {restaurantName}
-                </h1>
-                {settings?.description && (
-                  <p className="text-xs text-text-secondary truncate sm:max-w-[320px]">
-                    {settings.description}
-                  </p>
-                )}
-                {!settings?.description && (
-                  <p className="text-xs text-text-secondary">
-                    {restaurant.restaurant_type}
-                  </p>
-                )}
-              </div>
+      {/* Header superior con logo grande centrado */}
+      <div className="max-w-5xl mx-auto px-4 pt-0 pb-6 text-center">
+        {/* Logo grande centrado */}
+        <div className="flex justify-center mb-0">
+          {restaurantLogo ? (
+            <img
+              src={restaurantLogo}
+              alt={restaurantName}
+              className="w-full max-w-[180px] sm:max-w-[220px] md:max-w-[280px] h-auto shrink-0 object-contain"
+            />
+          ) : (
+            <div className="h-24 w-24 md:h-32 md:w-32 rounded-2xl flex items-center justify-center bg-accent/10 border-4 border-white text-accent font-black text-2xl md:text-3xl">
+              {(restaurantName || restaurant?.name || "R").charAt(0).toUpperCase()}
             </div>
-            {(whatsappLink || instagramLink || (hours && hours.length > 0)) && (
-              <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
-                {whatsappLink && (
-                  <a
-                    href={whatsappLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 sm:gap-2 rounded-lg border border-border px-2.5 py-2 sm:px-3 text-xs font-medium text-text hover:bg-primary/5 transition-colors"
-                    style={{ borderColor: primaryColor }}
-                  >
-                    <MessageCircle className="w-4 h-4 shrink-0" style={{ color: primaryColor }} />
-                    <span className="hidden sm:inline">Mensaje por WhatsApp</span>
-                  </a>
-                )}
-                {instagramLink && (
-                  <a
-                    href={instagramLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 sm:gap-2 rounded-lg border border-border px-2.5 py-2 sm:px-3 text-xs font-medium text-text hover:bg-primary/5 transition-colors"
-                    style={{ borderColor: primaryColor }}
-                  >
-                    <Instagram className="w-4 h-4 shrink-0" style={{ color: primaryColor }} />
-                    <span className="hidden sm:inline">Instagram</span>
-                  </a>
-                )}
-                {hours && hours.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowHoursModal(true)}
-                    className="flex items-center gap-1.5 sm:gap-2 rounded-lg border border-border px-2.5 py-2 sm:px-3 text-xs font-medium text-text hover:bg-primary/5 transition-colors"
-                    style={{ borderColor: primaryColor }}
-                  >
-                    <Clock className="w-4 h-4 shrink-0" style={{ color: primaryColor }} />
-                    <span className="hidden sm:inline">Horarios</span>
-                  </button>
-                )}
-              </div>
+          )}
+        </div>
+        {restaurantName && (
+          <h2 className="text-3xl font-bold text-text mb-1">
+            {restaurantName}
+          </h2>
+        )}
+        {settings?.description && (
+          <p className="text-text-secondary text-sm sm:text-base max-w-2xl mx-auto mt-1">
+            {settings.description}
+          </p>
+        )}
+        {restaurantIsOpen ? (
+          <span
+            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-xs font-semibold border"
+            style={{
+              backgroundColor: `${primaryColor}15`,
+              color: primaryColor,
+              borderColor: `${primaryColor}30`,
+            }}
+          >
+            <span
+              className="w-2 h-2 rounded-full animate-pulse"
+              style={{ backgroundColor: "#22c55e" }}
+            />
+            Abierto ahora
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full bg-text/5 text-text-secondary text-xs font-semibold border border-border">
+            <X className="w-3 h-3" />
+            Cerrado temporalmente
+          </span>
+        )}
+          <div className="flex items-center gap-2 flex-wrap justify-center mt-4 py-2">
+            {whatsappLink && (
+              <button
+                type="button"
+                onClick={openWhatsApp}
+                className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-[var(--customer-primary)]/10 hover:text-[var(--customer-primary)] hover:border-[var(--customer-primary)]/40 hover:-translate-y-0.5"
+                style={{ borderColor: primaryColor }}
+              >
+                <MessageCircle className="w-4 h-4" style={{ color: primaryColor }} />
+                WhatsApp
+              </button>
+            )}
+            {instagramLink && (
+              <a
+                href={instagramLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-[var(--customer-primary)]/10 hover:text-[var(--customer-primary)] hover:border-[var(--customer-primary)]/40 hover:-translate-y-0.5"
+                style={{ borderColor: primaryColor }}
+              >
+                <Instagram className="w-4 h-4" style={{ color: primaryColor }} />
+                Instagram
+              </a>
+            )}
+            {hours && hours.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowHoursModal(true)}
+                className="flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-text transition-all hover:bg-[var(--customer-primary)]/10 hover:text-[var(--customer-primary)] hover:border-[var(--customer-primary)]/40 hover:-translate-y-0.5"
+                style={{ borderColor: primaryColor }}
+              >
+                <Clock className="w-4 h-4" style={{ color: primaryColor }} />
+                Horarios
+              </button>
             )}
           </div>
-
-          <div className="relative mt-2 sm:mt-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary" />
-            <input
-              type="text"
-              placeholder="Buscar platillos"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg text-sm text-text placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
-              style={{
-                borderColor: "rgba(0,0,0,0.2)",
-                outlineColor: primaryColor,
-              }}
-            />
-          </div>
+        {/* Buscador */}
+        <div className="relative mb-8">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-text-secondary"
+          />
+          <input
+            type="text"
+            placeholder="Buscar platillos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3.5 border border-border rounded-2xl text-text placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus-ring-accent/30 focus:border-accent transition-all"
+            style={{
+              borderColor: "rgba(0,0,0,0.15)",
+              outlineColor: primaryColor,
+            }}
+          />
         </div>
-      </div>
 
-      {/* Closed Menu Banner */}
-      {settings?.is_temporarily_closed && (
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4 py-3 sm:py-4">
-          <div className="rounded-2xl border border-border bg-bg-subtle p-4 sm:p-6 shadow-sm text-center">
-            <div className="flex flex-col items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-text/10">
-                <X className="h-6 w-6 text-text" />
-              </div>
-              <h3 className="text-lg font-bold text-text">
-                Menú temporalmente cerrado
-              </h3>
-              <p className="text-sm text-text-secondary max-w-md">
-                {settings.closed_message || "En este momento no estamos recibiendo pedidos."}
-              </p>
-            </div>
-          </div>
+        {/* Categorías */}
+        <div className="flex gap-2 overflow-x-auto py-2 mb-6 scrollbar-hide">
+          {categories.map((category) => (
+            <button
+              key={category}
+              type="button"
+              onClick={() => setCategoryFilter(category || "all")}
+              className={`shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium border transition-all duration-200 ${
+                categoryFilter === category
+                  ? "bg-accent text-white border-accent"
+                  : "bg-white border border-border text-text-secondary hover:bg-[var(--customer-primary)]/10 hover:text-[var(--customer-primary)] hover:border-[var(--customer-primary)]/40 hover:-translate-y-0.5 transition-all"
+              }`}
+            >
+              {category === "all" ? "Todos" : category}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* Category Tabs */}
-      <div className="bg-white border-b sticky top-0 z-30">
-        <div className="max-w-screen-lg mx-auto px-3 sm:px-4">
-          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
-            {categories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setCategoryFilter(category || "all")}
-                className={`px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors ${
-                  categoryFilter === category
-                    ? "bg-primary text-primary-content"
-                    : "bg-bg-subtle border border-border text-text-secondary hover:bg-primary/10 hover:text-primary"
-                }`}
-                style={{
-                  backgroundColor:
-                    categoryFilter === category
-                      ? primaryColor
-                      : "rgba(249,250,251,1)",
-                  color:
-                    categoryFilter === category ? "#ffffff" : "#6b7280",
-                  borderColor:
-                    categoryFilter === category ? primaryColor : "rgba(0,0,0,0.1)",
-                }}
-              >
-                {category === "all" ? "Todos" : category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Menu Grid */}
-      <div className="max-w-screen-lg mx-auto px-3 sm:px-4 py-3 sm:py-4">
+        {/* Grid de productos */}
         {filteredItems.length === 0 ? (
-          <div className="text-center py-12 sm:py-20">
-            <Package className="mx-auto mb-3 h-8 w-8 sm:h-10 sm:w-10 text-text-secondary opacity-40" />
-            <p className="text-sm text-text-secondary">No se encontraron productos</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <Package className="w-12 h-12 text-text-secondary mb-4 opacity-40" />
+            <h3 className="text-lg font-bold text-text mb-2">
+              No se encontraron productos
+            </h3>
+            <p className="text-text-secondary">
+              {searchTerm || categoryFilter !== "all"
+                ? "Prueba cambiando los filtros."
+                : "Aún no hay productos disponibles."}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-4 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-3 xl:grid-cols-4">
             {filteredItems.map((item) => {
               const quantity = getItemQuantity(item.id);
 
@@ -448,7 +460,8 @@ const CustomerMenu: React.FC = () => {
           </div>
         )}
       </div>
-      {/* Cart Modal */}
+
+      {/* Carrito */}
       <CartModal
         isOpen={showCart}
         cart={cart}
@@ -462,7 +475,7 @@ const CustomerMenu: React.FC = () => {
         primaryColor={primaryColor}
       />
 
-      {/* Product Detail Modal */}
+      {/* Detalle producto */}
       {activeItem && (
         <ProductDetailModal
           key={activeItem.id}
@@ -477,13 +490,12 @@ const CustomerMenu: React.FC = () => {
         />
       )}
 
-      {/* Checkout Modal */}
+      {/* Checkout */}
       <CheckoutModal
         isOpen={showCheckout}
         cart={cart}
         restaurantId={restaurant.id}
         settings={settings}
-        primaryColor={primaryColor}
         onClose={() => setShowCheckout(false)}
         onSuccess={() => {
           setCart([]);
@@ -491,7 +503,7 @@ const CustomerMenu: React.FC = () => {
         }}
       />
 
-      {/* Hours Modal */}
+      {/* Horarios */}
       <Modal
         isOpen={showHoursModal}
         onClose={() => setShowHoursModal(false)}
@@ -518,7 +530,7 @@ const CustomerMenu: React.FC = () => {
               return (
                 <div
                   key={hour.day_of_week}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
+                  className="flex items-center justify-between rounded-xl border border-border p-3"
                 >
                   <span className="text-sm font-medium text-text">{dayName}</span>
                   {hour.is_open ? (
@@ -535,36 +547,41 @@ const CustomerMenu: React.FC = () => {
         </div>
       </Modal>
 
-      {/* Bottom Cart Bar */}
-      {cartCount > 0 && (
-        <div
-          className="fixed bottom-0 left-0 right-0 text-white shadow-[0_-2px_20px_rgba(0,0,0,0.15)] z-40"
-          style={{ backgroundColor: primaryColor }}
-        >
-          <button
-            onClick={() => setShowCart(true)}
-            className="max-w-screen-lg mx-auto w-full px-3 sm:px-4 py-3 sm:py-3.5 flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`bg-white text-[#${primaryColor}] font-bold text-xs sm:text-sm w-5 h-5 sm:w-6 sm:h-6 rounded flex items-center justify-center`}>
-                {cartCount}
+      {/* Barra fija del carrito */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
+          cartCount > 0 && !showItemModal && !showCart && !showCheckout && !showHoursModal
+            ? "translate-y-0 opacity-100"
+            : "translate-y-full opacity-0 pointer-events-none"
+        }`}
+        style={{ backgroundColor: primaryColor }}
+      >
+          <div className="max-w-5xl mx-auto px-4 py-4">
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-accent text-white font-bold text-xs`}>
+                    {cartCount}
+                  </div>
+                  <span className="font-bold text-text">
+                    {formatCurrency(
+                      cart.reduce(
+                        (sum, item) => sum + item.itemTotal * item.quantity,
+                        0
+                      )
+                    )}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setShowCart(true)}
+                  className="w-10 h-10 rounded-xl bg-accent text-white flex items-center justify-center hover:bg-accent/90 transition-colors"
+                >
+                  <ShoppingCart className="w-5 h-5" />
+                </button>
               </div>
-              <span className="font-bold text-sm sm:text-base">
-                {formatCurrency(
-                  cart.reduce(
-                    (sum, item) => sum + item.itemTotal * item.quantity,
-                    0
-                  )
-                )}
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 font-semibold text-xs sm:text-sm">
-              <span>Ver carrito</span>
-              <span className="text-base sm:text-lg">›</span>
-            </div>
-          </button>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -598,64 +615,72 @@ const CartModal: React.FC<CartModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Tu carrito" size="lg">
       <div className="space-y-6">
         {cart.length === 0 ? (
-          <div className="text-center py-8">
-            <ShoppingCart className="w-16 h-16 text-text-secondary mx-auto mb-4 opacity-50" />
+          <div className="text-center py-12">
+            <ShoppingCart className="w-16 h-16 text-text-secondary mx-auto mb-4 opacity-40" />
             <p className="text-text-secondary">Tu carrito está vacío</p>
           </div>
         ) : (
           <>
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
               {cart.map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-start space-x-4 p-4 bg-bg-subtle rounded-lg"
+                  className="flex items-center gap-4 p-4 bg-white rounded-xl border border-border"
                 >
-                  <div className="flex-1">
+                  <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-bg-subtle overflow-hidden">
+                    {(item.product_images?.[0]?.url || item.image_url) && (
+                      <img
+                        src={item.product_images?.[0]?.url || item.image_url}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-text">{item.name}</h4>
                     {item.selectedSize && (
-                      <p className="text-sm text-text-secondary">
+                      <p className="text-xs text-text-secondary">
                         Tamaño: {item.selectedSize.name}
                       </p>
                     )}
                     {item.selectedAddons.length > 0 && (
-                      <p className="text-sm text-text-secondary">
-                        Adicionales:{" "}
-                        {item.selectedAddons.map((a) => a.name).join(", ")}
+                      <p className="text-xs text-text-secondary">
+                        Adicionales: {item.selectedAddons.map((a) => a.name).join(", ")}
                       </p>
                     )}
-                    <p className={`text-[#${primaryColor}] font-semibold mt-1`}>
+                    <p className={`mt-1 text-[#${primaryColor}] font-bold`}>
                       {formatCurrency(item.itemTotal)}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => onUpdateQuantity(index, -1)}
-                      className="p-1 rounded-full bg-border hover:bg-text-secondary/20"
+                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-text/5 transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
-                    <span className="w-8 text-center font-semibold">
+                    <span className="w-8 text-center font-bold text-text">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => onUpdateQuantity(index, 1)}
-                      className="p-1 rounded-full bg-border hover:bg-text-secondary/20"
+                      className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-text/5 transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
+                    <button
+                      onClick={() => onRemove(index)}
+                      className="w-8 h-8 rounded-full text-error hover:bg-error/5 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => onRemove(index)}
-                    className="p-1 text-error hover:bg-error/10 rounded"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
               ))}
             </div>
 
-            <div className="border-t border-border pt-4">
-              <div className="flex justify-between text-xl font-bold text-text mb-4">
+            <div className="border-t border-border pt-6">
+              <div className="flex justify-between text-xl font-bold text-text mb-6">
                 <span>Total</span>
                 <span>{formatCurrency(total)}</span>
               </div>
@@ -676,7 +701,6 @@ interface CheckoutModalProps {
   cart: CartItem[];
   restaurantId: string;
   settings: RestaurantSettings | null;
-  primaryColor: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -686,7 +710,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   cart,
   restaurantId,
   settings,
-  primaryColor,
   onClose,
   onSuccess,
 }) => {
@@ -770,20 +793,16 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       toast.success("¡Pedido realizado con éxito!");
       setTimeout(() => {
         onSuccess();
-        resetForm();
+        setCustomerName("");
+        setCustomerPhone("");
+        setDeliveryAddress("");
+        setNotes("");
+        setOrderType(availableTypes[0].value);
+        setSuccess(false);
       }, 1500);
     } else {
       toast.error(orderError?.message || "No se pudo realizar el pedido");
     }
-  };
-
-  const resetForm = () => {
-    setCustomerName("");
-    setCustomerPhone("");
-    setDeliveryAddress("");
-    setNotes("");
-    setOrderType(availableTypes[0].value);
-    setSuccess(false);
   };
 
   if (success) {
@@ -806,22 +825,24 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Finalizar pedido" size="lg">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <Modal isOpen={isOpen} onClose={onClose} title="Finalizar pedido" size="lg" position="bottom" showCloseButton={false} contentClassName="p-0">
+      <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-6">
         {error && <Alert type="error" message={error} />}
 
-        {/* Order Type */}
+        {/* Tipo de pedido */}
         <div>
-          <label className="label mb-3">Tipo de pedido</label>
+          <label className="block text-sm font-medium text-text mb-3">
+            Tipo de pedido
+          </label>
           <div className={`grid gap-3 ${availableTypes.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
             {availableTypes.map((type) => (
               <button
                 key={type.value}
                 type="button"
                 onClick={() => setOrderType(type.value)}
-                className={`p-4 rounded-lg border-2 font-semibold transition-colors ${
+                className={`p-3 rounded-xl border-2 text-sm font-semibold transition-all ${
                   orderType === type.value
-                    ? `border-[#${primaryColor}] bg-[#${primaryColor}]/10 text-[#${primaryColor}]`
+                    ? "border-accent bg-accent text-white"
                     : "border-border hover:border-accent/50"
                 }`}
               >
@@ -831,7 +852,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         </div>
 
-        {/* Delivery Address (only for delivery orders) */}
+        {/* Dirección de domicilio */}
         {orderType === "delivery" && (
           <Input
             label="Dirección de domicilio"
@@ -842,7 +863,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           />
         )}
 
-        {/* Customer Details */}
+        {/* Datos del cliente */}
         <Input
           label="Tu nombre"
           value={customerName}
@@ -861,21 +882,23 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           helperText="Usaremos esto para contactarte sobre tu pedido"
         />
 
-        {/* Special Instructions */}
+        {/* Instrucciones especiales */}
         <div>
-          <label className="label mb-2">Instrucciones especiales (opcional)</label>
+          <label className="block text-sm font-medium text-text mb-2">
+            Instrucciones especiales (opcional)
+          </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Ej. Sin cebolla, punto de cocción, etc."
             rows={3}
-            className="input-field"
+            className="input"
           />
         </div>
 
-        {/* Order Summary */}
-        <div className="bg-bg-subtle rounded-lg p-4 space-y-2">
-          <h4 className="font-semibold text-text mb-3">Resumen del pedido</h4>
+        {/* Resumen */}
+        <div className="bg-bg-subtle rounded-xl p-3 space-y-1.5">
+          <h4 className="font-semibold text-text mb-2 text-sm">Resumen del pedido</h4>
           {cart.map((item, index) => (
             <div key={index} className="flex justify-between text-sm">
               <span className="text-text-secondary">
@@ -895,9 +918,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={onClose} fullWidth>
+        {/* Acciones */}
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" onClick={onClose} fullWidth size="sm">
             Cancelar
           </Button>
           <Button type="submit" loading={loading} fullWidth>

@@ -114,13 +114,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {ingredients.length > 0 && (
                 <section>
                   <h3 className="text-sm font-bold text-text">¿Qué incluye?</h3>
-                  <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <ul className="mt-3 flex flex-wrap gap-2">
                     {ingredients.map((ingredient, index) => (
                       <li
                         key={`${ingredient}-${index}`}
-                        className="flex items-start gap-2 rounded-xl bg-bg-subtle px-3 py-2 text-sm text-text"
+                        className="inline-flex items-center gap-2 rounded-full bg-bg-subtle px-3 py-1.5 text-sm text-text border border-border"
                       >
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                        <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
                         <span>{ingredient}</span>
                       </li>
                     ))}

@@ -37,6 +37,7 @@ import {
   normalizePhoneInput,
   playSound,
 } from "../../utils/helpers";
+import { buildWhatsAppMessage } from "../../utils/whatsappMessages";
 
 const getStatusLabel = (status: string) =>
   ({
@@ -421,33 +422,42 @@ const Orders: React.FC = () => {
                       Marcar como entregado
                     </Button>
                   )}
-                  {(order.status === "preparing" || order.status === "ready") &&
-                    order.customer_phone && (
-                    <a
-                      href={`https://wa.me/${order.customer_phone.replace(
-                        /\D/g,
-                        ""
-                      )}?text=${encodeURIComponent(
-                        order.status === "preparing"
-                          ? `Hola ${order.customer_name || ""}, tu pedido #${
-                              order.order_number
-                            } se está preparando. Te avisaremos cuando esté listo.`
-                          : order.order_type === "delivery"
-                          ? `Hola ${order.customer_name || ""}, tu pedido #${
-                              order.order_number
-                            } está listo y va en camino a tu domicilio. Muy pronto llegará.`
-                          : `Hola ${order.customer_name || ""}, tu pedido #${
-                              order.order_number
-                            } está listo para ser recogido.`
-                      )}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-bg-subtle hover:text-text sm:text-sm"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      WhatsApp
-                    </a>
-                  )}
+                    {(order.status === "preparing" || order.status === "ready") &&
+                      order.customer_phone && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ctx =
+                            order.status === "preparing"
+                              ? {
+                                  type: "order_preparing" as const,
+                                  customerName: order.customer_name || "",
+                                  orderNumber: order.order_number,
+                                }
+                              : order.order_type === "delivery"
+                                ? {
+                                    type: "order_delivery_ready" as const,
+                                    customerName: order.customer_name || "",
+                                    orderNumber: order.order_number,
+                                  }
+                                : {
+                                    type: "order_pickup_ready" as const,
+                                    customerName: order.customer_name || "",
+                                    orderNumber: order.order_number,
+                                  };
+                          const msg = buildWhatsAppMessage(ctx);
+                          const url = `https://api.whatsapp.com/send?phone=${order.customer_phone!.replace(
+                            /\D/g,
+                            ""
+                          )}&text=${encodeURIComponent(msg)}`;
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-medium text-text-secondary hover:bg-bg-subtle hover:text-text sm:text-sm"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        WhatsApp
+                      </button>
+                    )}
                 </div>
               </div>
             </Card>

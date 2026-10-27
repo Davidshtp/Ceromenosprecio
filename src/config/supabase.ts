@@ -159,8 +159,6 @@ export interface Order {
     | "pending"
     | "preparing"
     | "ready"
-    | "preparing"
-    | "ready"
     | "completed"
     | "cancelled"
     | "rejected";

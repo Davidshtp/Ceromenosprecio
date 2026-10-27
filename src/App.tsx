@@ -24,7 +24,7 @@ function App() {
         }}
       />
       <Routes>
-        {/* Restaurant access */}
+        {/* Public access */}
         <Route path="/" element={<LoginPage />} />
         <Route path="/login" element={<LoginPage />} />
 
