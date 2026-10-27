@@ -5,6 +5,7 @@ import {
   Route,
   Link,
   useLocation,
+  Navigate,
 } from "react-router-dom";
 import {
   LogOut,
@@ -13,14 +14,12 @@ import {
   UtensilsCrossed,
   FileText,
   Settings,
-  Palette,
 } from "lucide-react";
 import RestaurantHome from "./RestaurantHome";
 import Orders from "./Orders";
 import Menu from "./Menu";
 import Reports from "./Reports";
 import RestaurantSettings from "./RestaurantSettings";
-import Personalization from "./Personalization";
 import { supabase, type RestaurantSession } from "../../config/supabase";
 
 const RestaurantDashboard: React.FC = () => {
@@ -85,7 +84,6 @@ const RestaurantDashboard: React.FC = () => {
     { path: "/restaurant/menu", icon: UtensilsCrossed, label: "Menú" },
     { path: "/restaurant/reports", icon: FileText, label: "Reportes" },
     { path: "/restaurant/settings", icon: Settings, label: "Configuración" },
-    { path: "/restaurant/personalization", icon: Palette, label: "Personalización" },
   ];
 
   return (
@@ -150,7 +148,7 @@ const RestaurantDashboard: React.FC = () => {
           <Route path="menu" element={<Menu />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<RestaurantSettings />} />
-          <Route path="personalization" element={<Personalization />} />
+          <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </div>
     </div>

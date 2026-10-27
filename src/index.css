@@ -1,4 +1,8 @@
 @tailwind base;
+
+html {
+  scroll-behavior: smooth;
+}
 @tailwind components;
 @tailwind utilities;
 
@@ -18,6 +22,7 @@
   .mono-interface {
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     letter-spacing: -0.015em;
+    scroll-behavior: smooth;
   }
 
   .login-view,
@@ -175,10 +180,15 @@
   }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Hide all scrollbars */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 ::-webkit-scrollbar-track {

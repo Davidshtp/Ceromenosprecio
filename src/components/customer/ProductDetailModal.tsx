@@ -72,7 +72,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-2 text-text shadow-md backdrop-blur transition-colors hover:bg-white"
+            className="absolute right-3 top-3 z-20 rounded-full bg-white/90 p-2 text-black shadow-md backdrop-blur transition-colors hover:bg-white"
             aria-label="Cerrar detalle del producto"
           >
             <X className="h-5 w-5" />
@@ -83,19 +83,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="flex flex-col gap-6 p-5 pb-6 sm:p-7 sm:pb-7">
               <div>
                 {item.category_name && (
-                  <span className="inline-flex rounded-full bg-bg-subtle px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary">
+                  <span className="inline-flex rounded-full bg-black/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-black-secondary">
                     {item.category_name}
                   </span>
                 )}
-                <h2 className="mt-2 text-2xl font-bold text-text">{item.name}</h2>
+                <h2 className="mt-2 text-2xl font-bold text-black">{item.name}</h2>
                 <div className="mt-2 flex items-baseline gap-2">
-                  {hasSizes && <span className="text-xs text-text-secondary">Desde</span>}
-                  <span className="text-xl font-bold text-text">
+                  {hasSizes && <span className="text-xs text-black-secondary">Desde</span>}
+                  <span className="text-xl font-bold text-black">
                     {formatCurrency(hasSizes ? getMenuItemMinPrice(item) : item.base_price)}
                   </span>
                 </div>
                 {item.description && (
-                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-text-secondary">
+                  <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-black-secondary">
                     {item.description}
                   </p>
                 )}
@@ -113,12 +113,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               {ingredients.length > 0 && (
                 <section>
-                  <h3 className="text-sm font-bold text-text">¿Qué incluye?</h3>
+                  <h3 className="text-sm font-bold text-black">¿Qué incluye?</h3>
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {ingredients.map((ingredient, index) => (
                       <li
                         key={`${ingredient}-${index}`}
-                        className="inline-flex items-center gap-2 rounded-full bg-bg-subtle px-3 py-1.5 text-sm text-text border border-border"
+                        className="inline-flex items-center gap-2 rounded-full bg-black/5 px-3 py-1.5 text-sm text-black border border-black/20"
                       >
                         <Check className="h-3.5 w-3.5 shrink-0 text-accent" />
                         <span>{ingredient}</span>
@@ -131,8 +131,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {hasSizes && item.sizes && (
                 <section>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-text">Elige el tamaño</h3>
-                    <span className="text-xs text-text-secondary">Obligatorio</span>
+                    <h3 className="text-sm font-bold text-black">Elige el tamaño</h3>
+                    <span className="text-xs text-black-secondary">Obligatorio</span>
                   </div>
                   <div className="mt-3 grid gap-2">
                     {item.sizes.map((size) => {
@@ -143,23 +143,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           type="button"
                           onClick={() => setSelectedSizeName(size.name)}
                           aria-pressed={isSelected}
-                          className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 transition ${
+                          className={`flex items-center justify-between rounded-none border-2 px-4 py-3 transition ${
                             isSelected
-                              ? "border-accent bg-accent/5"
-                              : "border-border hover:border-accent/40"
+                              ? "border-black bg-black/5"
+                              : "border-black/20 hover:border-black/40"
                           }`}
                         >
-                          <span className="flex items-center gap-2 font-medium text-text">
+                          <span className="flex items-center gap-2 font-medium text-black">
                             <span
                               className={`flex h-5 w-5 items-center justify-center rounded-full border ${
-                                isSelected ? "border-accent bg-accent" : "border-border"
+                                isSelected ? "border-black bg-black" : "border-black/20"
                               }`}
                             >
                               {isSelected && <Check className="h-3 w-3 text-white" />}
                             </span>
                             {size.name}
                           </span>
-                          <span className="font-semibold text-text">{formatCurrency(size.price)}</span>
+                          <span className="font-semibold text-black">{formatCurrency(size.price)}</span>
                         </button>
                       );
                     })}
@@ -170,8 +170,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {addons.length > 0 && (
                 <section>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-text">Adicionales</h3>
-                    <span className="text-xs text-text-secondary">Opcional</span>
+                    <h3 className="text-sm font-bold text-black">Adicionales</h3>
+                    <span className="text-xs text-black-secondary">Opcional</span>
                   </div>
                   <div className="mt-3 grid gap-2">
                     {addons.map((addon) => {
@@ -182,23 +182,23 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           type="button"
                           onClick={() => toggleAddon(addon)}
                           aria-pressed={isSelected}
-                          className={`flex items-center justify-between rounded-xl border-2 px-4 py-3 transition ${
+                          className={`flex items-center justify-between rounded-none border-2 px-4 py-3 transition ${
                             isSelected
-                              ? "border-accent bg-accent/5"
-                              : "border-border hover:border-accent/40"
+                              ? "border-black bg-black/5"
+                              : "border-black/20 hover:border-black/40"
                           }`}
                         >
-                          <span className="flex items-center gap-2 font-medium text-text">
+                          <span className="flex items-center gap-2 font-medium text-black">
                             <span
                               className={`flex h-5 w-5 items-center justify-center rounded border ${
-                                isSelected ? "border-accent bg-accent" : "border-border"
+                                isSelected ? "border-black bg-black" : "border-black/20"
                               }`}
                             >
                               {isSelected && <Check className="h-3 w-3 text-white" />}
                             </span>
                             {addon.name}
                           </span>
-                          <span className="font-semibold text-text">+{formatCurrency(addon.price)}</span>
+                          <span className="font-semibold text-black">+{formatCurrency(addon.price)}</span>
                         </button>
                       );
                     })}
@@ -207,31 +207,31 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
             </div>
           </div>
-          <div className="shrink-0 border-t border-border bg-white px-4 py-4 sm:px-7 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+          <div className="shrink-0 border-t border-black/20 bg-white px-4 py-4 sm:px-7 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center rounded-xl border border-border">
+              <div className="flex items-center rounded-none border border-black/20">
                 <button
                   type="button"
                   onClick={() => setQuantity((current) => Math.max(1, current - 1))}
                   disabled={quantity <= 1}
-                  className="p-2 text-text-secondary transition-colors hover:text-text disabled:opacity-40"
+                  className="p-2 text-black-secondary transition-colors hover:text-black disabled:opacity-40"
                   aria-label="Quitar una unidad"
                 >
                   <Minus className="h-4 w-4" />
                 </button>
-                <span className="w-10 text-center font-bold text-text">{quantity}</span>
+                <span className="w-10 text-center font-bold text-black">{quantity}</span>
                 <button
                   type="button"
                   onClick={() => setQuantity((current) => Math.min(99, current + 1))}
-                  className="p-2 text-text-secondary transition-colors hover:text-text"
+                  className="p-2 text-black-secondary transition-colors hover:text-black"
                   aria-label="Agregar una unidad"
                 >
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
               <div className="text-right">
-                <p className="text-xs text-text-secondary">Total</p>
-                <p className="text-xl font-bold text-text">{formatCurrency(total)}</p>
+                <p className="text-xs text-black-secondary">Total</p>
+                <p className="text-xl font-bold text-black">{formatCurrency(total)}</p>
               </div>
             </div>
             <div className="mt-3">
