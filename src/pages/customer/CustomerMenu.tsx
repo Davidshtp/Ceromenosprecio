@@ -822,6 +822,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [customerPhone, setCustomerPhone] = useState("");
   const [orderType, setOrderType] = useState<"delivery" | "pickup">("delivery");
   const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [locError, setLocError] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -841,6 +844,51 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   if (!orderType || !availableTypes.some((t) => t.value === orderType)) {
     setOrderType(availableTypes[0].value);
   }
+
+   const shareLocation = async () => {
+    setLocError("");
+    if (!window.isSecureContext) {
+      setLocError("La ubicación requiere HTTPS. Escribe la dirección manualmente.");
+      return;
+    }
+    if (!navigator.geolocation) {
+      setLocError("Tu navegador no soporta geolocalización");
+      return;
+    }
+    try {
+      const perm = await (navigator as any).permissions?.query?.({ name: "geolocation" });
+      if (perm && perm.state === "denied") {
+        setLocError("Permiso bloqueado. Habilítalo en la configuración del sitio y vuelve a intentar, o escribe la dirección.");
+        return;
+      }
+    } catch {
+      // Permissions API not supported; continue
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        if (Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+          setDeliveryCoords({ lat, lng });
+        } else {
+          setLocError("Ubicación inválida");
+        }
+        setLocating(false);
+      },
+      (err) => {
+        if (err.code === 1) {
+          setLocError("Permiso denegado. Habilítalo en el navegador o escribe la dirección.");
+        } else if (err.code === 2) {
+          setLocError("No se pudo determinar la posición. Escribe la dirección.");
+        } else {
+          setLocError("Tiempo de espera agotado. Intenta de nuevo o escribe la dirección.");
+        }
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
 
   const subtotal = cart.reduce(
     (sum, item) => sum + item.itemTotal * item.quantity,
@@ -873,6 +921,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       restaurant_id: restaurantId,
       order_type: orderType,
       delivery_address: orderType === "delivery" ? deliveryAddress.trim() : undefined,
+      delivery_latitude: orderType === "delivery" && deliveryCoords ? deliveryCoords.lat : undefined,
+      delivery_longitude: orderType === "delivery" && deliveryCoords ? deliveryCoords.lng : undefined,
       customer_name: customerName,
       customer_phone: customerPhone,
       items: cart.map((item) => ({
@@ -901,6 +951,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         setCustomerName("");
         setCustomerPhone("");
         setDeliveryAddress("");
+        setDeliveryCoords(null);
+        setLocError("");
         setNotes("");
         setOrderType(availableTypes[0].value);
         setSuccess(false);
@@ -959,13 +1011,43 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
         {/* Dirección de domicilio */}
         {orderType === "delivery" && (
-          <Input
-            label="Dirección de domicilio"
-            value={deliveryAddress}
-            onChange={(e) => setDeliveryAddress(e.target.value)}
-            placeholder="Calle, número, barrio, ciudad..."
-            required
-          />
+          <div className="space-y-2">
+            <Input
+              label="Dirección de domicilio"
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
+               placeholder="Referencia, barrio, puntos de referencia..."
+              required
+            />
+            <button
+              type="button"
+              onClick={shareLocation}
+              disabled={locating}
+              className="w-full border-2 border-black bg-yellow-400 text-black font-black uppercase text-xs py-2 px-3 hover:bg-black hover:text-yellow-400 transition-all disabled:opacity-60"
+            >
+              {locating ? "Obteniendo ubicación..." : "Compartir mi ubicación"}
+            </button>
+            {locError && <p className="text-xs text-red-600">{locError}</p>}
+            {deliveryCoords && (
+              <div className="space-y-2">
+                <p className="text-xs text-green-700">
+                  Ubicación obtenida
+                  <button type="button" onClick={shareLocation} className="ml-2 underline">Actualizar</button>
+                </p>
+                <div className="overflow-hidden border-2 border-black">
+                  <iframe
+                    title="Mapa de tu ubicación"
+                    src={`https://www.google.com/maps?q=${deliveryCoords.lat},${deliveryCoords.lng}&output=embed`}
+                    width="100%"
+                    height="200"
+                    style={{ border: 0 }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Datos del cliente */}

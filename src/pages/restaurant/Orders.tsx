@@ -575,6 +575,20 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             {order.customer_name && <p><strong>Cliente:</strong> {order.customer_name}</p>}
             {order.customer_phone && <p><strong>Teléfono:</strong> {order.customer_phone}</p>}
             {order.delivery_address && <p><strong>Dirección:</strong> {order.delivery_address}</p>}
+            {order.order_type === "delivery" && (order.delivery_latitude != null && order.delivery_longitude != null || order.delivery_address) && (
+              <a
+                href={
+                  order.delivery_latitude != null && order.delivery_longitude != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`
+                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.delivery_address || "")}&travelmode=driving`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 px-3 py-1 border-2 border-black bg-yellow-400 text-black font-black uppercase text-xs"
+              >
+                Cómo llegar
+              </a>
+            )}
             {order.table_number && <p><strong>Mesa:</strong> {order.table_number}</p>}
             {order.customer_notes && (
               <p className="mt-3 rounded-lg bg-accent-secondary/10 p-3 text-text-secondary">

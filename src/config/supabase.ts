@@ -151,6 +151,8 @@ export interface Order {
   customer_name?: string;
   customer_phone?: string;
   delivery_address?: string;
+  delivery_latitude?: number | null;
+  delivery_longitude?: number | null;
   items: OrderItem[];
   subtotal: number;
   discount?: number;
