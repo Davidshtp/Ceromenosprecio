@@ -44,9 +44,18 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
+      <style>{`
+        @keyframes modal-backdrop-in { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes modal-content-in { from { opacity: 0; transform: translateY(16px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        .modal-backdrop-in { animation: modal-backdrop-in 0.2s ease-out; }
+        .modal-content-in { animation: modal-content-in 0.25s ease-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .modal-backdrop-in, .modal-content-in { animation: none; }
+        }
+      `}</style>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-black/50 modal-backdrop-in"
         onClick={onClose}
       />
 
@@ -58,7 +67,7 @@ export const Modal: React.FC<ModalProps> = ({
         onClick={onClose}
       >
         <div
-          className={`relative w-full ${sizes[size]} bg-white shadow-xl transition-all ${
+          className={`relative w-full ${sizes[size]} bg-white shadow-xl modal-content-in ${
             isBottom
               ? "flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl sm:max-h-[90vh] sm:rounded-2xl"
               : "rounded-lg"
