@@ -76,7 +76,6 @@ const LoginPage: React.FC = () => {
         JSON.stringify({
           id: userData.id,
           email: userData.email,
-          role: userData.role,
           restaurant_id: userData.restaurant_id,
           restaurant: {
             name: userData.restaurant_name,

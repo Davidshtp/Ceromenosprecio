@@ -319,6 +319,14 @@ const Orders: React.FC = () => {
                       </div>
                     </div>
                     {getStatusBadge(order.status)}
+                    {order.payment_method && (
+                      <Badge variant="neutral" className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm">
+                        {order.payment_method === "cash" ? "Efectivo" : "Transferencia"}
+                        {order.payment_method === "cash" && order.cash_received
+                          ? ` · paga ${formatCurrency(order.cash_received)} (cambio ${formatCurrency(order.change_due ?? 0)})`
+                          : ""}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="grid gap-4 px-4 py-4 sm:px-5 sm:grid-cols-[1fr_auto]">
@@ -339,6 +347,23 @@ const Orders: React.FC = () => {
                           <a href={`tel:${order.customer_phone}`} className="text-accent hover:underline">
                             <span className="break-all">{order.customer_phone}</span>
                           </a>
+                        </div>
+                      )}
+                      {order.delivery_address && (
+                        <div className="flex items-center gap-2 text-text-secondary">
+                          <span className="font-semibold text-text">Dirección:</span>
+                          <span className="break-words">{order.delivery_address}</span>
+                        </div>
+                      )}
+                      {order.payment_method && (
+                        <div className="flex items-center gap-2 text-text-secondary">
+                          <span className="font-semibold text-text">Pago:</span>
+                          <span className="break-words">
+                            {order.payment_method === "cash" ? "Efectivo" : "Transferencia"}
+                            {order.payment_method === "cash" && order.cash_received
+                              ? ` · paga ${formatCurrency(order.cash_received)} (cambio ${formatCurrency(order.change_due ?? 0)})`
+                              : ""}
+                          </span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-text-secondary">
@@ -590,6 +615,15 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
               </a>
             )}
             {order.table_number && <p><strong>Mesa:</strong> {order.table_number}</p>}
+            {order.payment_method && (
+              <p>
+                <strong>Método de pago:</strong>{" "}
+                {order.payment_method === "cash" ? "Efectivo" : "Transferencia"}
+                {order.payment_method === "cash" && order.cash_received
+                  ? ` · paga ${formatCurrency(order.cash_received)} (cambio ${formatCurrency(order.change_due ?? 0)})`
+                  : ""}
+              </p>
+            )}
             {order.customer_notes && (
               <p className="mt-3 rounded-lg bg-accent-secondary/10 p-3 text-text-secondary">
                 <strong className="text-text">Nota:</strong> {order.customer_notes}

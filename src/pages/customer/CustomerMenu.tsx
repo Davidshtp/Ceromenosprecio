@@ -6,7 +6,6 @@ import {
   Minus,
   X,
   Search,
-  CheckCircle,
   ShoppingBag,
   Store,
   Phone,
@@ -15,7 +14,7 @@ import {
   ChevronDown,
   Instagram,
 } from "lucide-react";
-import { Card, Button, Input, Modal, Alert } from "../../components/ui";
+import { Card, Button, Input, Modal } from "../../components/ui";
 import { subscribeToMenuItems, createOrder } from "../../services/restaurantService";
 import type {
   MenuItem,
@@ -278,8 +277,8 @@ const CustomerMenu: React.FC = () => {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white px-6">
         <img src="/assets/brand/mascota en blanco.png" alt="Cero Menosprecio" className="h-28 w-28 object-contain animate-pulse mb-6" />
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-yellow-400 mb-2">Cero Menosprecio</p>
-        <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-6">Cargando el menú...</h2>
+        <p className="text-xs font-black uppercase tracking-[0.3em] text-yellow-400 mb-2 text-center">Cero Menosprecio</p>
+        <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-6 text-center">Cargando el menú...</h2>
         <div className="flex gap-2">
           <span className="h-2 w-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "0ms" }} />
           <span className="h-2 w-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "150ms" }} />
@@ -839,8 +838,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [locating, setLocating] = useState(false);
   const [locError, setLocError] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "transfer">("cash");
+  const [cashAmount, setCashAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
   const deliveryEnabled = settings?.delivery_enabled ?? true;
@@ -876,6 +876,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setLoading(false);
       setDeliveryCoords(null);
       setLocError("");
+      setPaymentMethod("cash");
+      setCashAmount("");
     }
   }, [isOpen]);
 
@@ -934,21 +936,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (loading) return;
-    setError("");
 
     if (!customerName.trim()) {
-      setError("Ingresa tu nombre");
+      toast.error("Ingresa tu nombre");
       return;
     }
 
     if (!isValidPhone(customerPhone)) {
-      setError("Ingresa un número de teléfono válido de 10 dígitos");
+      toast.error("Ingresa un número de teléfono válido de 10 dígitos");
       return;
     }
 
     if (orderType === "delivery" && !deliveryAddress.trim()) {
-      setError("Ingresa tu dirección de domicilio");
+      toast.error("Ingresa tu dirección de domicilio");
       return;
+    }
+
+    if (paymentMethod === "cash") {
+      const amount = Number(cashAmount);
+      if (!cashAmount || !Number.isFinite(amount) || amount < total) {
+        toast.error("El monto en efectivo debe ser mayor o igual al total");
+        return;
+      }
     }
 
     setLoading(true);
@@ -975,6 +984,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       discount: 0,
       total,
       customer_notes: notes,
+      payment_method: paymentMethod,
+      cash_received: paymentMethod === "cash" && cashAmount ? Number(cashAmount) : undefined,
+      change_due:
+        paymentMethod === "cash" && cashAmount
+          ? Math.max(0, Number(cashAmount) - total)
+          : undefined,
     };
 
     const { error: orderError } = await createOrder(orderData);
@@ -983,18 +998,15 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (!orderError) {
       toast.success("¡Pedido realizado con éxito!");
       setSuccess(true);
-      setTimeout(() => {
-        onSuccess();
-        setCustomerName("");
-        setCustomerPhone("");
-        setDeliveryAddress("");
-        setDeliveryCoords(null);
-        setLocError("");
-        setNotes("");
-        setOrderType(availableTypes[0].value);
-        setSuccess(false);
-        setLoading(false);
-      }, 1500);
+      setCustomerName("");
+      setCustomerPhone("");
+      setDeliveryAddress("");
+      setDeliveryCoords(null);
+      setLocError("");
+      setNotes("");
+      setOrderType(availableTypes[0].value);
+      setPaymentMethod("cash");
+      setCashAmount("");
     } else {
       toast.error(orderError?.message || "No se pudo realizar el pedido");
     }
@@ -1002,18 +1014,28 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (success) {
     return (
-      <Modal isOpen={isOpen} onClose={onClose} title="¡Pedido realizado!" size="md">
-        <div className="text-center py-8">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-          <h3 className="text-2xl font-bold text-black mb-2">
-            ¡Pedido realizado!
-          </h3>
-          <p className="text-black/60 mb-6">
-            Tu pedido ha sido enviado. El restaurante lo preparará en breve.
-          </p>
-          <Button onClick={onClose} fullWidth>
-            Cerrar
-          </Button>
+      <Modal isOpen={isOpen} onClose={onClose} title="" size="md" contentClassName="p-0" showCloseButton={false}>
+        <div className="relative overflow-hidden bg-black text-white">
+          <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-yellow-400/20 blur-2xl" />
+          <div className="relative flex flex-col items-center gap-4 p-8 text-center">
+            <img
+              src="/assets/brand/mascota en blanco.png"
+              alt="Mascota"
+              className="h-24 w-24 object-contain drop-shadow-[0_8px_24px_rgba(250,204,21,0.35)]"
+            />
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-yellow-400">Pedido confirmado</p>
+              <h3 className="text-2xl font-black uppercase leading-none">¡Todo listo!</h3>
+            </div>
+            <p className="max-w-xs text-sm text-white/70">
+              Tu pedido ha sido enviado. El restaurante lo preparará en breve. Te contactaremos por WhatsApp.
+            </p>
+            <div className="w-full border-t-2 border-yellow-400/30 pt-5">
+              <Button onClick={() => onSuccess()} fullWidth size="lg">
+                OK, entendido
+              </Button>
+            </div>
+          </div>
         </div>
       </Modal>
     );
@@ -1022,7 +1044,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Finalizar pedido" size="lg" position="bottom" showCloseButton={false} contentClassName="p-0">
       <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-6">
-        {error && <Alert type="error" message={error} />}
 
         {/* Tipo de pedido */}
         <div>
@@ -1055,8 +1076,9 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
                placeholder="Referencia, barrio, puntos de referencia..."
-              required
-            />
+          required
+          helperText="Usaremos esto para contactarte sobre tu pedido"
+        />
             <button
               type="button"
               onClick={shareLocation}
@@ -1101,10 +1123,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           label="Teléfono"
           type="tel"
           value={customerPhone}
-          onChange={(e) => setCustomerPhone(e.target.value)}
+          onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
           placeholder="Número de celular de 10 dígitos"
+          maxLength={10}
+          inputMode="numeric"
           required
-          helperText="Usaremos esto para contactarte sobre tu pedido"
         />
 
         {/* Instrucciones especiales */}
@@ -1121,18 +1144,75 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           />
         </div>
 
+        {/* Método de pago */}
+        <div>
+          <label className="block text-xs font-black uppercase tracking-wide text-black mb-2">
+            Método de pago
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("cash")}
+              className={`p-3 border-2 text-xs font-black uppercase tracking-wide transition-all ${
+                paymentMethod === "cash"
+                  ? "border-black bg-black text-white"
+                  : "border-black/20 hover:border-black"
+              }`}
+            >
+              Efectivo
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod("transfer")}
+              className={`p-3 border-2 text-xs font-black uppercase tracking-wide transition-all ${
+                paymentMethod === "transfer"
+                  ? "border-black bg-black text-white"
+                  : "border-black/20 hover:border-black"
+              }`}
+            >
+              Transferencia
+            </button>
+          </div>
+        </div>
+
+        {paymentMethod === "cash" && (
+          <div className="space-y-2">
+            <Input
+              label="¿Con cuánto pagas?"
+              type="number"
+              value={cashAmount}
+              onChange={(e) => setCashAmount(e.target.value)}
+              placeholder={String(total)}
+              min={total}
+              required
+            />
+            {Number(cashAmount) > 0 && Number(cashAmount) >= total && (
+              <p className="text-xs font-bold text-black/70">
+                Cambio: {formatCurrency(Math.max(0, Number(cashAmount) - total))}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Resumen */}
         <div className="bg-black text-white p-4 space-y-1.5 border-2 border-black">
           <h4 className="font-black uppercase text-xs mb-2 text-yellow-400">Resumen del pedido</h4>
           {cart.map((item, index) => (
-            <div key={index} className="flex justify-between text-sm">
-              <span className="text-white/70">
-                {item.quantity}x {item.name}
-                {item.selectedSize && ` (${item.selectedSize.name})`}
-              </span>
-              <span className="text-white font-bold">
-                {formatCurrency(item.itemTotal * item.quantity)}
-              </span>
+            <div key={index} className="space-y-0.5">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/70">
+                  {item.quantity}x {item.name}
+                  {item.selectedSize && ` (${item.selectedSize.name})`}
+                </span>
+                <span className="text-white font-bold">
+                  {formatCurrency(item.itemTotal * item.quantity)}
+                </span>
+              </div>
+              {item.selectedAddons && item.selectedAddons.length > 0 && (
+                <div className="pl-3 text-xs text-white/50">
+                  + {item.selectedAddons.map((a) => a.name).join(", ")}
+                </div>
+              )}
             </div>
           ))}
           <div className="border-t border-white/20 pt-2 mt-2 space-y-1">

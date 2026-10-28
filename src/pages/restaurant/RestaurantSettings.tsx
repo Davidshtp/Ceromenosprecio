@@ -236,7 +236,7 @@ const RestaurantSettings: React.FC = () => {
                 <label className="text-sm font-medium text-text">WhatsApp</label>
                 <Input
                   value={settings.whatsapp || ""}
-                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), whatsapp: e.target.value })}
+                  onChange={(e) => setSettings({ ...(settings as RestaurantSettingsData), whatsapp: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                   placeholder="3000000000"
                   type="tel"
                   inputMode="numeric"

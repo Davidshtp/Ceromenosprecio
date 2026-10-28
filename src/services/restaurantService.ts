@@ -51,24 +51,10 @@ export const subscribeToOrders = (
 };
 
 // Update order status
-export const updateOrderStatus = async (
-  orderId: string,
-  status: Order["status"],
-  paymentData?: {
-    paymentMethod?: string;
-    transactionId?: string;
-  }
-) => {
-  const updateData: Record<string, string | undefined> = { status };
-
-  if (paymentData) {
-    updateData.payment_method = paymentData.paymentMethod;
-    updateData.payment_transaction_id = paymentData.transactionId;
-  }
-
+export const updateOrderStatus = async (orderId: string, status: Order["status"]) => {
   const { error } = await supabase
     .from("orders")
-    .update(updateData)
+    .update({ status })
     .eq("id", orderId);
 
   if (error) {
@@ -311,13 +297,15 @@ export const deleteMenuItem = async (itemId: string) => {
 
 // Create order (manual or from customer)
 export const createOrder = async (order: Partial<Order>) => {
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("orders")
-    .insert([order])
-    .select()
-    .single();
+    .insert([order]);
 
-  return { data, error };
+  if (error) {
+    console.error("Error creating order:", error);
+  }
+
+  return { data: null, error };
 };
 
 // Get restaurant stats
