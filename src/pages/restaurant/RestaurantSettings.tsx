@@ -61,7 +61,7 @@ const RestaurantSettings: React.FC = () => {
                 closing_time: "22:00",
               }))
         );
-      } catch (err) {
+      } catch {
         setError("No se pudieron cargar los datos del restaurante.");
       } finally {
         setLoading(false);

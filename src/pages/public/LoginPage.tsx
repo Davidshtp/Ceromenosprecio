@@ -16,6 +16,7 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
 
     if (!formData.email || !formData.password) {
       toast.error("Completa tu correo electrónico y contraseña");

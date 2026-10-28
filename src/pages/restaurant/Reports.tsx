@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import {
   TrendingUp,
   DollarSign,
@@ -50,11 +50,7 @@ const Reports: React.FC = () => {
   const [dateRange, setDateRange] = useState<"7" | "30" | "90">("30");
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    fetchReportData();
-  }, [dateRange]);
-
-  const fetchReportData = async () => {
+  const fetchReportData = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -86,7 +82,7 @@ const Reports: React.FC = () => {
       // Top items
       const itemCounts: Record<string, { count: number; revenue: number }> = {};
       orders?.forEach((order) => {
-        (order.items || []).forEach((item: any) => {
+        (order.items || []).forEach((item: { name: string; quantity: number; item_total: number }) => {
           if (!itemCounts[item.name]) {
             itemCounts[item.name] = { count: 0, revenue: 0 };
           }
@@ -145,7 +141,11 @@ const Reports: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    void fetchReportData();
+  }, [fetchReportData]);
 
   const exportReport = () => {
     if (!reportData) return;
@@ -320,8 +320,8 @@ const Reports: React.FC = () => {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={(entry: any) =>
-                    `${entry.type}: ${((entry.percent || 0) * 100).toFixed(0)}%`
+                  label={(entry: unknown) =>
+                    `${(entry as { type?: string })?.type ?? ""}: ${(((entry as { percent?: number })?.percent || 0) * 100).toFixed(0)}%`
                   }
                   outerRadius={100}
                   fill="#8884d8"

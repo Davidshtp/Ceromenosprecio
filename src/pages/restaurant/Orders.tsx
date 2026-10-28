@@ -163,7 +163,7 @@ const Orders: React.FC = () => {
     .restaurant_id as string | undefined;
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, any> = {
+    const variants: Record<string, "warning" | "success" | "neutral" | "error"> = {
       pending: "warning",
       completed: "success",
       cancelled: "neutral",
@@ -544,7 +544,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             Productos del pedido
           </h4>
           <div className="order-items-ticker flex gap-3 overflow-x-auto pb-2">
-            {order.items?.map((item: any, index: number) => (
+            {order.items?.map((item: { quantity: number; name: string; selected_size?: { name: string }; selected_addons?: { name: string }[]; item_total?: number }, index: number) => (
               <div key={index} className="min-w-[210px] rounded-xl border border-border bg-white p-4">
                 <p className="text-sm font-bold text-text">{item.quantity}× {item.name}</p>
                 {item.selected_size?.name && (
@@ -552,7 +552,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                     Tamaño: {item.selected_size.name}
                   </p>
                 )}
-                {item.selected_addons?.length > 0 && (
+                {item.selected_addons && item.selected_addons.length > 0 && (
                   <p className="mt-1 text-xs text-text-secondary">
                     Adicionales: {item.selected_addons
                       .map((addon: { name: string }) => addon.name)
@@ -560,7 +560,7 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                   </p>
                 )}
                 <p className="mt-4 text-right text-sm font-bold text-text">
-                  {formatCurrency(item.item_total || item.subtotal || 0)}
+                  {formatCurrency(item.item_total ?? 0)}
                 </p>
               </div>
             ))}
@@ -729,10 +729,15 @@ const LocalSaleModal: React.FC<LocalSaleModalProps> = ({
 
   useEffect(() => {
     if (!isOpen || !restaurantId) return;
-    setLoadingMenu(true);
-    void getAvailableMenuItems(restaurantId)
-      .then(({ data }) => setMenuItems(data))
-      .finally(() => setLoadingMenu(false));
+    void (async () => {
+      setLoadingMenu(true);
+      try {
+        const { data } = await getAvailableMenuItems(restaurantId);
+        setMenuItems(data);
+      } finally {
+        setLoadingMenu(false);
+      }
+    })();
   }, [isOpen, restaurantId]);
 
   const subtotal = items.reduce(

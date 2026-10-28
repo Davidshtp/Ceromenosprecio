@@ -7,4 +7,3 @@ export { Modal } from "./Modal";
 export { Badge } from "./Badge";
 export { Loading } from "./Loading";
 export { Alert } from "./Alert";
-export { ImageUpload } from "./ImageUpload";

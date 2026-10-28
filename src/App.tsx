@@ -1,17 +1,13 @@
 
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
+import { lazy, Suspense } from "react";
 
 import LoginPage from "./pages/public/LoginPage";
 
-// Restaurant dashboard
-import RestaurantDashboard from "./pages/restaurant/Dashboard";
-
-// Customer ordering
-import CustomerMenu from "./pages/customer/CustomerMenu";
-
-// 404
-import NotFoundPage from "./pages/NotFoundPage";
+const RestaurantDashboard = lazy(() => import("./pages/restaurant/Dashboard"));
+const CustomerMenu = lazy(() => import("./pages/customer/CustomerMenu"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 function App() {
   return (
@@ -23,6 +19,7 @@ function App() {
           className: "app-toast",
         }}
       />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
       <Routes>
         {/* Public access */}
         <Route path="/" element={<LoginPage />} />
@@ -38,6 +35,7 @@ function App() {
         <Route path="/404" element={<NotFoundPage />} />
         <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

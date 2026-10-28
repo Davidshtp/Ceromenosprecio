@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ShoppingBag, UtensilsCrossed, DollarSign, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, Badge, Loading } from "../../components/ui";
@@ -6,22 +6,24 @@ import { getRestaurantStats } from "../../services/restaurantService";
 import { formatCurrency } from "../../utils/helpers";
 
 const RestaurantHome: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [salesPeriod, setSalesPeriod] = useState<7 | 30>(7);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.restaurant_id) return;
 
     const data = await getRestaurantStats(user.restaurant_id);
     setStats(data);
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadStats();
+  }, [loadStats]);
 
   if (loading) {
     return <Loading text="Cargando resumen..." />;
@@ -256,7 +258,7 @@ const RestaurantHome: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {stats.recentOrders.slice(0, 5).map((order: any) => (
+            {stats.recentOrders.slice(0, 5).map((order: { id: string; order_number?: number; customer_name?: string; total?: number; status?: string; order_type?: string; items?: unknown[] }) => (
               <div
                 key={order.id}
                 className="flex items-center justify-between p-3 bg-bg-subtle rounded-lg"

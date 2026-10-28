@@ -88,7 +88,9 @@ const CustomerMenu: React.FC = () => {
   }, [slug]);
 
   useEffect(() => {
-    loadRestaurant();
+    void (async () => {
+      await loadRestaurant();
+    })();
   }, [slug, loadRestaurant]);
 
   useEffect(() => {
@@ -156,7 +158,7 @@ const CustomerMenu: React.FC = () => {
     const digits = settings.whatsapp.replace(/[^0-9]/g, "");
     if (!digits) return null;
     return digits;
-  }, [settings?.whatsapp]);
+  }, [settings]);
 
   const openWhatsApp = () => {
     if (!whatsappLink) return;
@@ -178,7 +180,7 @@ const CustomerMenu: React.FC = () => {
       url = `https://instagram.com/${url.replace(/[^a-zA-Z0-9._-]/g, "")}`;
     }
     return url;
-  }, [settings?.instagram_url]);
+  }, [settings]);
 
   const styleVars = useMemo(
     () =>
@@ -844,17 +846,38 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const deliveryEnabled = settings?.delivery_enabled ?? true;
   const pickupEnabled = settings?.pickup_enabled ?? true;
 
-  const availableTypes: { value: "delivery" | "pickup"; label: string }[] = [];
-  if (deliveryEnabled) availableTypes.push({ value: "delivery", label: "Domicilio" });
-  if (pickupEnabled) availableTypes.push({ value: "pickup", label: "Recoger en tienda" });
+  const availableTypes = useMemo<{ value: "delivery" | "pickup"; label: string }[]>(() => {
+    const types: { value: "delivery" | "pickup"; label: string }[] = [];
+    if (deliveryEnabled) types.push({ value: "delivery", label: "Domicilio" });
+    if (pickupEnabled) types.push({ value: "pickup", label: "Recoger en tienda" });
+    if (types.length === 0) types.push({ value: "delivery", label: "Domicilio" });
+    return types;
+  }, [deliveryEnabled, pickupEnabled]);
 
-  if (availableTypes.length === 0) {
-    availableTypes.push({ value: "delivery", label: "Domicilio" });
-  }
+  const availableTypeKeys = availableTypes.map((t) => t.value).join(",");
+  useEffect(() => {
+    if (!availableTypes.some((t) => t.value === orderType)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOrderType(availableTypes[0]?.value ?? "delivery");
+    }
+  }, [orderType, availableTypeKeys, availableTypes]);
 
-  if (!orderType || !availableTypes.some((t) => t.value === orderType)) {
-    setOrderType(availableTypes[0].value);
-  }
+  useEffect(() => {
+    if (orderType !== "delivery") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDeliveryCoords(null);
+    }
+  }, [orderType]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSuccess(false);
+      setLoading(false);
+      setDeliveryCoords(null);
+      setLocError("");
+    }
+  }, [isOpen]);
 
    const shareLocation = async () => {
     setLocError("");
@@ -867,7 +890,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       return;
     }
     try {
-      const perm = await (navigator as any).permissions?.query?.({ name: "geolocation" });
+      const nav = navigator as Navigator & { permissions?: { query: (p: { name: string }) => Promise<{ state: string }> } };
+    const perm = await nav.permissions?.query?.({ name: "geolocation" });
       if (perm && perm.state === "denied") {
         setLocError("Permiso bloqueado. Habilítalo en la configuración del sitio y vuelve a intentar, o escribe la dirección.");
         return;
@@ -909,6 +933,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError("");
 
     if (!customerName.trim()) {
@@ -957,6 +982,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
     if (!orderError) {
       toast.success("¡Pedido realizado con éxito!");
+      setSuccess(true);
       setTimeout(() => {
         onSuccess();
         setCustomerName("");
@@ -967,6 +993,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
         setNotes("");
         setOrderType(availableTypes[0].value);
         setSuccess(false);
+        setLoading(false);
       }, 1500);
     } else {
       toast.error(orderError?.message || "No se pudo realizar el pedido");

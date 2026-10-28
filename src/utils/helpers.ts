@@ -52,8 +52,8 @@ export const generateTempPassword = (): string => {
 /**
  * Calculate order totals
  */
-export const calculateOrderTotals = (items: any[]) => {
-  const subtotal = items.reduce((sum, item) => sum + item.item_total, 0);
+export const calculateOrderTotals = (items: unknown[]) => {
+  const subtotal = items.reduce((sum: number, item) => sum + (item as { item_total: number }).item_total, 0);
   const total = subtotal;
 
   return { subtotal, total };
@@ -124,7 +124,7 @@ export const hashPassword = async (password: string): Promise<string> => {
 /**
  * Debounce function
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
@@ -178,7 +178,7 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch (err) {
+  } catch {
     return false;
   }
 };
@@ -231,6 +231,7 @@ export const playNotificationSound = async (): Promise<boolean> => {
 /**
  * Play sound (alias for playNotificationSound)
  */
-export const playSound = (
-  _type: "notification" | "success" | "error" = "notification"
-) => playNotificationSound();
+export const playSound = (_type?: string) => {
+  void _type;
+  return playNotificationSound();
+};
