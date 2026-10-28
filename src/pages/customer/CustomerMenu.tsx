@@ -273,7 +273,18 @@ const CustomerMenu: React.FC = () => {
   };
 
   if (loading) {
-    return <Loading text="Cargando menú..." />;
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white px-6">
+        <img src="/assets/brand/mascota en blanco.png" alt="Cero Menosprecio" className="h-28 w-28 object-contain animate-pulse mb-6" />
+        <p className="text-xs font-black uppercase tracking-[0.3em] text-yellow-400 mb-2">Cero Menosprecio</p>
+        <h2 className="text-2xl font-black uppercase tracking-tight text-white mb-6">Cargando el menú...</h2>
+        <div className="flex gap-2">
+          <span className="h-2 w-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+          <span className="h-2 w-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+          <span className="h-2 w-2 rounded-full bg-yellow-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+        </div>
+      </div>
+    );
   }
 
   if (!restaurant) {
