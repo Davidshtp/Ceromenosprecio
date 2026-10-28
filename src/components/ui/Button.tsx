@@ -5,6 +5,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "outline" | "ghost" | "danger";
   size?: "sm" | "md" | "lg";
   loading?: boolean;
+  loadingText?: string;
   icon?: React.ReactNode;
   fullWidth?: boolean;
 }
@@ -14,6 +15,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = "primary",
   size = "md",
   loading = false,
+  loadingText = "Cargando...",
   icon,
   fullWidth = false,
   className = "",
@@ -50,7 +52,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <>
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          Cargando...
+          {loadingText}
         </>
       ) : (
         <>

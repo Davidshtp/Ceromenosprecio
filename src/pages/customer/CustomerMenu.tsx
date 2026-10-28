@@ -993,7 +993,6 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
     };
 
     const { error: orderError } = await createOrder(orderData);
-    setLoading(false);
 
     if (!orderError) {
       toast.success("¡Pedido realizado con éxito!");
@@ -1008,6 +1007,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setPaymentMethod("cash");
       setCashAmount("");
     } else {
+      setLoading(false);
       toast.error(orderError?.message || "No se pudo realizar el pedido");
     }
   };
@@ -1031,7 +1031,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               Tu pedido ha sido enviado. El restaurante lo preparará en breve. Te contactaremos por WhatsApp.
             </p>
             <div className="w-full border-t-2 border-yellow-400/30 pt-5">
-              <Button onClick={() => onSuccess()} fullWidth size="lg">
+              <Button onClick={() => { onSuccess(); window.scrollTo({ top: 0, behavior: 'smooth' }); const el = document.querySelector('.mono-interface'); if (el) (el as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' }); }} fullWidth size="lg">
                 OK, entendido
               </Button>
             </div>
@@ -1179,11 +1179,11 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="space-y-2">
             <Input
               label="¿Con cuánto pagas?"
-              type="number"
-              value={cashAmount}
-              onChange={(e) => setCashAmount(e.target.value)}
-              placeholder={String(total)}
-              min={total}
+              type="text"
+              inputMode="numeric"
+              value={cashAmount ? formatCurrency(Number(cashAmount)) : ""}
+              onChange={(e) => setCashAmount(e.target.value.replace(/\D/g, "").slice(0, 12))}
+              placeholder={formatCurrency(total)}
               required
             />
             {Number(cashAmount) > 0 && Number(cashAmount) >= total && (
@@ -1228,7 +1228,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <Button type="button" variant="outline" onClick={onClose} fullWidth size="sm">
             Cancelar
           </Button>
-          <Button type="submit" loading={loading} fullWidth>
+          <Button type="submit" loading={loading} loadingText="Procesando pedido..." fullWidth>
             Realizar pedido
           </Button>
         </div>
