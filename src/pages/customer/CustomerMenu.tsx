@@ -15,7 +15,7 @@ import {
   ChevronDown,
   Instagram,
 } from "lucide-react";
-import { Card, Button, Input, Modal, Loading, Alert } from "../../components/ui";
+import { Card, Button, Input, Modal, Alert } from "../../components/ui";
 import { subscribeToMenuItems, createOrder } from "../../services/restaurantService";
 import type {
   MenuItem,
