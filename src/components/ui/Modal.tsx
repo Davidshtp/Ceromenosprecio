@@ -60,12 +60,13 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal */}
-      <div
-        className={`flex min-h-full justify-center ${
-          isBottom ? "items-end p-0 sm:items-center sm:p-4" : "items-center p-4"
-        }`}
-        onClick={onClose}
-      >
+          <div
+            className={`flex min-h-full justify-center ${
+              isBottom ? "items-end p-0 sm:items-center sm:p-4" : "items-center p-4"
+            }`}
+            onClick={onClose}
+            style={{ touchAction: 'pan-y' }}
+          >
         <div
           className={`relative w-full ${sizes[size]} bg-white shadow-xl modal-content-in ${
             isBottom

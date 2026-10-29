@@ -66,8 +66,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         showCloseButton={false}
         contentClassName="p-0"
       >
-        <div className="relative flex h-[88dvh] min-h-0 flex-col lg:grid lg:h-[min(760px,88vh)] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)] lg:grid-rows-[minmax(0,1fr)]">
-        <div className="relative shrink-0 lg:h-full">
+        <div className="relative flex h-[88dvh] min-h-0 flex-col lg:grid lg:h-[min(760px,88vh)] lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1.2fr)] lg:grid-rows-[minmax(0,1fr)]" style={{ touchAction: 'pan-y' }}>
+        <div className="relative shrink-0 lg:h-full" style={{ touchAction: 'pan-x pinch-zoom' }}>
           <ProductGallery images={images} productName={item.name} imageFit="contain" />
           <button
             type="button"

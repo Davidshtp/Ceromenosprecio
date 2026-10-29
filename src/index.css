@@ -2,16 +2,28 @@
 
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
   width: 100%;
+  max-width: 100%;
+  position: relative;
+  overscroll-behavior-x: none;
 }
 
 body {
+  overflow-x: hidden !important;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+  position: relative;
+}
+
+#root {
   overflow-x: hidden;
   width: 100%;
   max-width: 100%;
-  touch-action: pan-y;
-  overscroll-behavior-x: none;
+  position: relative;
 }
 
 @tailwind components;
@@ -21,23 +33,35 @@ body {
   * {
     @apply border-border;
     box-sizing: border-box;
+    max-width: 100%;
   }
 
   html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
     width: 100%;
+    max-width: 100%;
+    position: relative;
+    overscroll-behavior-x: none;
   }
 
   body {
     @apply bg-bg text-text font-sans antialiased;
     margin: 0;
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: hidden !important;
     width: 100%;
     max-width: 100%;
     touch-action: pan-y;
     overscroll-behavior-x: none;
+    position: relative;
+  }
+
+  #root {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100%;
+    position: relative;
   }
 }
 
@@ -203,7 +227,6 @@ body {
   }
 }
 
-/* Hide all scrollbars */
 html,
 body {
   scrollbar-width: none;

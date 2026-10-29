@@ -110,13 +110,15 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
         className="relative min-h-0 flex-1 overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        style={{ touchAction: 'pan-x pinch-zoom' }}
       >
         <button
           type="button"
-          onClick={handleOpenLightbox}
-          className="group relative block h-full w-full cursor-zoom-in"
-          aria-label={`Ampliar foto de ${productName}`}
-        >
+              onClick={handleOpenLightbox}
+              className="group relative block h-full w-full cursor-zoom-in"
+              aria-label={`Ampliar foto de ${productName}`}
+              style={{ touchAction: 'pan-x pinch-zoom' }}
+            >
           <img
             src={mainImage.url}
             alt={`${productName} ${safeIndex + 1}`}
@@ -174,7 +176,10 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
       </div>
 
       {images.length > 1 && (
-        <div className="flex shrink-0 gap-2 overflow-x-auto border-t border-black/5 bg-white/80 p-2">
+        <div
+        className="flex shrink-0 gap-2 overflow-x-auto border-t border-black/5 bg-white/80 p-2 overscroll-contain"
+        style={{ touchAction: 'pan-x' }}
+      >
           {images.map((image, index) => (
             <button
               key={`${image.url}-${index}`}
@@ -233,6 +238,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
               onClick={(event) => event.stopPropagation()}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
+              style={{ touchAction: 'pan-x pinch-zoom' }}
             >
               <img
                 src={mainImage.url}
