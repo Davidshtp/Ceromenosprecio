@@ -79,7 +79,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </button>
         </div>
         <div className="flex min-h-0 flex-1 flex-col lg:h-full relative">
-          <div className="min-h-0 flex-1 overflow-y-auto scrollbar-hide">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain scrollbar-hide">
             <div className="flex flex-col gap-6 p-5 pb-6 sm:p-7 sm:pb-7">
               <div>
                 {item.category_name && (

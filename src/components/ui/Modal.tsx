@@ -43,7 +43,7 @@ export const Modal: React.FC<ModalProps> = ({
   const isBottom = position === "bottom";
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
       <style>{`
         @keyframes modal-backdrop-in { from { opacity: 0 } to { opacity: 1 } }
         @keyframes modal-content-in { from { opacity: 0; transform: translateY(16px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
@@ -104,7 +104,7 @@ export const Modal: React.FC<ModalProps> = ({
           <div
             className={
               isBottom
-                ? `min-h-0 flex-1 overflow-y-auto ${contentClassName}`
+                ? `min-h-0 flex-1 overflow-y-auto overscroll-contain ${contentClassName}`
                 : contentClassName
             }
           >
