@@ -6,6 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "../../config/supabase";
 import type { Restaurant, RestaurantHours, RestaurantSettings as RestaurantSettingsData } from "../../config/supabase";
 import { getRestaurantSettings, saveRestaurantSettings } from "../../services/restaurantService";
+import { getStoredRestaurantId } from "../../utils/helpers";
 
 const RestaurantSettings: React.FC = () => {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
@@ -18,8 +19,8 @@ const RestaurantSettings: React.FC = () => {
   useEffect(() => {
     const fetchRestaurant = async () => {
       try {
-        const user = JSON.parse(localStorage.getItem("user") || "{}");
-        if (!user.restaurant_id) {
+        const restaurantId = getStoredRestaurantId();
+        if (!restaurantId) {
           setError("No se encontró el restaurante.");
           setLoading(false);
           return;
@@ -28,16 +29,16 @@ const RestaurantSettings: React.FC = () => {
         const { data, error: fetchError } = await supabase
           .from("restaurants")
           .select("*")
-          .eq("id", user.restaurant_id)
+          .eq("id", restaurantId)
           .single();
 
         if (fetchError) throw fetchError;
         setRestaurant(data);
 
-        const settingsData = await getRestaurantSettings(user.restaurant_id);
+        const settingsData = await getRestaurantSettings(restaurantId);
         setSettings(
           settingsData.settings || {
-            restaurant_id: user.restaurant_id,
+            restaurant_id: restaurantId,
             whatsapp: "",
             instagram_url: "",
             delivery_enabled: true,
@@ -50,7 +51,7 @@ const RestaurantSettings: React.FC = () => {
           settingsData.hours.length > 0
             ? settingsData.hours
             : Array.from({ length: 7 }, (_, day) => ({
-                restaurant_id: user.restaurant_id,
+                restaurant_id: restaurantId,
                 day_of_week: day,
                 is_open: day !== 0,
                 opening_time: "11:00",

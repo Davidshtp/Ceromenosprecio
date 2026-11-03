@@ -13,6 +13,8 @@ import {
   Plus,
   Search,
   Trash2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -34,6 +36,7 @@ import type { MenuItem, Order } from "../../config/supabase";
 import {
   formatDateTime,
   formatCurrency,
+  getStoredRestaurantId,
   normalizePhoneInput,
   playSound,
 } from "../../utils/helpers";
@@ -52,6 +55,13 @@ const getStatusLabel = (status: string) =>
 const getProductQuantity = (order: Order): number =>
   order.items?.reduce((total, item) => total + (Number(item.quantity) || 0), 0) || 0;
 
+const getOrderTypeLabel = (order: Order) =>
+  order.order_type === "delivery"
+    ? "Domicilio"
+    : order.order_type === "pickup"
+    ? "Recogida"
+    : "Venta local";
+
 const Orders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +70,7 @@ const Orders: React.FC = () => {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [showLocalSaleModal, setShowLocalSaleModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const knownOrderIdsRef = useRef<Set<string> | null>(null);
   const soundEnabledStorageKey = "restaurant-order-sound-enabled";
   const [soundEnabled, setSoundEnabled] = useState(
@@ -68,10 +79,15 @@ const Orders: React.FC = () => {
   const soundEnabledRef = useRef(soundEnabled);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!user.restaurant_id) return;
+    const restaurantId = getStoredRestaurantId();
+    if (!restaurantId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(false);
+      toast.error("No se encontró el restaurante de la sesión.");
+      return;
+    }
 
-    const subscription = subscribeToOrders(user.restaurant_id, (data) => {
+    const subscription = subscribeToOrders(restaurantId, (data) => {
       const currentOrderIds = new Set(data.map((order) => order.id));
       const knownOrderIds = knownOrderIdsRef.current;
 
@@ -101,6 +117,11 @@ const Orders: React.FC = () => {
       knownOrderIdsRef.current = currentOrderIds;
       setOrders(data);
       setLoading(false);
+    }, (error) => {
+      setLoading(false);
+      toast.error("No se pudieron sincronizar los pedidos", {
+        description: error.message,
+      });
     });
 
     return () => {
@@ -159,8 +180,7 @@ const Orders: React.FC = () => {
     setShowDetailsModal(true);
   };
 
-  const restaurantId = JSON.parse(localStorage.getItem("user") || "{}")
-    .restaurant_id as string | undefined;
+  const restaurantId = getStoredRestaurantId();
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "warning" | "success" | "neutral" | "error"> = {
@@ -193,15 +213,6 @@ const Orders: React.FC = () => {
         return <Clock className="w-5 h-5 text-text-secondary" />;
     }
   };
-
-  const getOrderTypeLabel = (order: Order) =>
-    order.order_type === "delivery"
-      ? "Domicilio"
-      : order.order_type === "pickup"
-      ? "Recogida"
-      : order.order_type === "counter"
-      ? "Venta local"
-      : "Otro";
 
   const getOrderAccent = (status: string) =>
     ({
@@ -261,8 +272,27 @@ const Orders: React.FC = () => {
           <span className="hidden sm:inline">{soundEnabled ? "Sonido activado" : "Activar sonido"}</span>
           <span className="sm:hidden">{soundEnabled ? "Sonido" : "Activar"}</span>
         </button>
+        <button
+          type="button"
+          onClick={() => setViewMode((mode) => (mode === "board" ? "list" : "board"))}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:border-accent hover:text-text"
+        >
+          {viewMode === "board" ? "Vista de lista" : "Tablero de cocina"}
+        </button>
       </div>
 
+      {viewMode === "board" ? (
+        <KitchenBoard
+          orders={orders}
+          onViewDetails={handleViewDetails}
+          onStatusUpdate={handleStatusUpdate}
+          onReject={(order) => {
+            setSelectedOrder(order);
+            setShowRejectModal(true);
+          }}
+        />
+      ) : (
+      <>
       {/* Status Filter */}
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {["pending", "preparing", "ready", "rejected", "completed"].map((status) => (
@@ -489,6 +519,8 @@ const Orders: React.FC = () => {
           ))}
         </div>
       )}
+      </>
+      )}
 
       {/* Order Details Modal */}
       <OrderDetailsModal
@@ -517,6 +549,200 @@ const Orders: React.FC = () => {
         onCreated={() => setShowLocalSaleModal(false)}
       />
     </div>
+  );
+};
+
+interface KitchenBoardProps {
+  orders: Order[];
+  onViewDetails: (order: Order) => void;
+  onStatusUpdate: (orderId: string, status: Order["status"]) => void;
+  onReject: (order: Order) => void;
+}
+
+const KitchenBoard: React.FC<KitchenBoardProps> = ({
+  orders,
+  onViewDetails,
+  onStatusUpdate,
+  onReject,
+}) => {
+  const [typeFilter, setTypeFilter] = useState<"all" | Order["order_type"]>("all");
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+      return;
+    }
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (error) {
+      toast.error("No se pudo activar la pantalla completa", {
+        description: error instanceof Error ? error.message : "El navegador bloqueó esta acción.",
+      });
+    }
+  };
+
+  const columns: {
+    status: Extract<Order["status"], "pending" | "preparing" | "ready" | "completed">;
+    label: string;
+    accent: string;
+    badge: string;
+  }[] = [
+    { status: "pending", label: "Pendientes", accent: "border-warning", badge: "bg-warning text-white" },
+    { status: "preparing", label: "En preparación", accent: "border-accent-secondary", badge: "bg-accent-secondary text-white" },
+    { status: "ready", label: "Listos", accent: "border-success", badge: "bg-success text-white" },
+    { status: "completed", label: "Completados", accent: "border-slate-400", badge: "bg-slate-600 text-white" },
+  ];
+
+  const visibleOrders = orders
+    .filter((order) => typeFilter === "all" || order.order_type === typeFilter)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+  return (
+    <div className={`space-y-4 ${isFullscreen ? "bg-bg-subtle p-5" : ""}`}>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-white p-3">
+        <div className="flex flex-wrap gap-2">
+          {(["all", "delivery", "pickup", "counter"] as const).map((type) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => setTypeFilter(type)}
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                typeFilter === type ? "bg-accent text-white" : "bg-bg-subtle text-text-secondary hover:bg-border"
+              }`}
+            >
+              {type === "all" ? "Todos" : type === "delivery" ? "Domicilio" : type === "pickup" ? "Recogida" : "Venta local"}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => void toggleFullscreen()}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-bold text-text-secondary hover:border-accent hover:text-text"
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+        </button>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-4 lg:grid-cols-2">
+        {columns.map((column) => {
+          const columnOrders = visibleOrders.filter((order) => order.status === column.status);
+          return (
+            <section key={column.status} className={`min-w-0 rounded-2xl border-t-4 bg-bg-subtle p-3 ${column.accent}`}>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-text sm:text-base">{column.label}</h3>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${column.badge}`}>{columnOrders.length}</span>
+              </div>
+              <div className="space-y-3">
+                {columnOrders.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-border bg-white p-5 text-center text-xs text-text-secondary">
+                    Sin pedidos
+                  </p>
+                ) : (
+                  columnOrders.map((order) => (
+                    <KitchenOrderCard
+                      key={order.id}
+                      order={order}
+                      now={now}
+                      onViewDetails={onViewDetails}
+                      onStatusUpdate={onStatusUpdate}
+                      onReject={onReject}
+                    />
+                  ))
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+interface KitchenOrderCardProps {
+  order: Order;
+  now: number;
+  onViewDetails: (order: Order) => void;
+  onStatusUpdate: (orderId: string, status: Order["status"]) => void;
+  onReject: (order: Order) => void;
+}
+
+const KitchenOrderCard: React.FC<KitchenOrderCardProps> = ({
+  order,
+  now,
+  onViewDetails,
+  onStatusUpdate,
+  onReject,
+}) => {
+  const endTime =
+    ["completed", "cancelled", "rejected"].includes(order.status)
+      ? new Date(order.closed_at || order.updated_at || order.created_at).getTime()
+      : now;
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((endTime - new Date(order.created_at).getTime()) / 60_000)
+  );
+  const overdue = elapsedMinutes >= 30;
+  const warning = elapsedMinutes >= 15;
+  const nextStatus =
+    order.status === "pending"
+      ? "preparing"
+      : order.status === "preparing"
+      ? "ready"
+      : order.status === "ready"
+      ? "completed"
+      : null;
+
+  return (
+    <article className={`rounded-xl border bg-white p-3 shadow-sm ${overdue ? "border-error ring-2 ring-error/20" : warning ? "border-warning" : "border-border"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-black text-text">#{order.order_number}</p>
+          <p className="mt-1 text-xs font-semibold text-text-secondary">{getOrderTypeLabel(order)}</p>
+        </div>
+        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${overdue ? "bg-error/10 text-error" : warning ? "bg-warning/10 text-warning" : "bg-bg-subtle text-text-secondary"}`}>
+          <Clock className="h-3.5 w-3.5" />
+          {elapsedMinutes < 60 ? `${elapsedMinutes} min` : `${Math.floor(elapsedMinutes / 60)}h ${elapsedMinutes % 60}m`}
+        </span>
+      </div>
+      {overdue && <p className="mt-2 text-xs font-bold text-error">Pedido atrasado</p>}
+      <div className="mt-3 space-y-1 border-t border-border pt-3">
+        {order.items.slice(0, 3).map((item, index) => (
+          <p key={`${item.name}-${index}`} className="truncate text-sm text-text">
+            <span className="font-black">{item.quantity}×</span> {item.name}
+          </p>
+        ))}
+        {order.items.length > 3 && <p className="text-xs text-text-secondary">+{order.items.length - 3} productos más</p>}
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button type="button" onClick={() => onViewDetails(order)} className="flex-1 rounded-lg border border-border px-2 py-2 text-xs font-bold text-text-secondary hover:bg-bg-subtle">
+          Detalles
+        </button>
+        {nextStatus && (
+          <button type="button" onClick={() => onStatusUpdate(order.id, nextStatus)} className="flex-1 rounded-lg bg-accent px-2 py-2 text-xs font-bold text-white hover:bg-accent/90">
+            {nextStatus === "preparing" ? "Preparar" : nextStatus === "ready" ? "Listo" : "Entregar"}
+          </button>
+        )}
+        {order.status === "pending" && (
+          <button type="button" onClick={() => onReject(order)} className="rounded-lg border border-error/30 px-2 py-2 text-xs font-bold text-error hover:bg-error/5">
+            Rechazar
+          </button>
+        )}
+      </div>
+    </article>
   );
 };
 
@@ -600,13 +826,18 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
             {order.customer_name && <p><strong>Cliente:</strong> {order.customer_name}</p>}
             {order.customer_phone && <p><strong>Teléfono:</strong> {order.customer_phone}</p>}
             {order.delivery_address && <p><strong>Dirección:</strong> {order.delivery_address}</p>}
-            {order.order_type === "delivery" && (order.delivery_latitude != null && order.delivery_longitude != null || order.delivery_address) && (
+            {order.order_type === "delivery" &&
+              order.delivery_address &&
+              (order.delivery_latitude == null || order.delivery_longitude == null) && (
+                <p className="text-xs text-text-secondary">
+                  El cliente proporcionó la dirección sin compartir su ubicación exacta.
+                </p>
+              )}
+            {order.order_type === "delivery" &&
+              order.delivery_latitude != null &&
+              order.delivery_longitude != null && (
               <a
-                href={
-                  order.delivery_latitude != null && order.delivery_longitude != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`
-                    : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(order.delivery_address || "")}&travelmode=driving`
-                }
+                href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_latitude},${order.delivery_longitude}&travelmode=driving`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block mt-2 px-3 py-1 border-2 border-black bg-yellow-400 text-black font-black uppercase text-xs"

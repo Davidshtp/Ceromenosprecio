@@ -6,7 +6,7 @@ import {
   getRestaurantStats,
   subscribeToOrders,
 } from "../../services/restaurantService";
-import { formatCurrency } from "../../utils/helpers";
+import { formatCurrency, getStoredRestaurantId } from "../../utils/helpers";
 import type { RestaurantStats } from "../../config/supabase";
 
 const RestaurantHome: React.FC = () => {
@@ -16,10 +16,14 @@ const RestaurantHome: React.FC = () => {
   const [salesPeriod, setSalesPeriod] = useState<7 | 30>(7);
 
   const loadStats = useCallback(async () => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!user.restaurant_id) return;
+    const restaurantId = getStoredRestaurantId();
+    if (!restaurantId) {
+      setError("No se encontró el restaurante de la sesión.");
+      setLoading(false);
+      return;
+    }
 
-    const result = await getRestaurantStats(user.restaurant_id);
+    const result = await getRestaurantStats(restaurantId);
     if (result.error) {
       setError(result.error.message);
     } else {
@@ -34,11 +38,11 @@ const RestaurantHome: React.FC = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadStats();
 
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!user.restaurant_id) return;
+    const restaurantId = getStoredRestaurantId();
+    if (!restaurantId) return;
 
     const subscription = subscribeToOrders(
-      user.restaurant_id,
+      restaurantId,
       () => {
         void loadStats();
       },

@@ -10,7 +10,7 @@ import {
 import { toast } from "sonner";
 import { Card, Button, Loading, Alert } from "../../components/ui";
 import { supabase } from "../../config/supabase";
-import { formatCurrency } from "../../utils/helpers";
+import { formatCurrency, getStoredRestaurantId } from "../../utils/helpers";
 
 interface ReportData {
   totalRevenue: number;
@@ -272,8 +272,8 @@ const Reports: React.FC = () => {
     setLoading(true);
     setError("");
     try {
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (!user.restaurant_id) {
+      const restaurantId = getStoredRestaurantId();
+      if (!restaurantId) {
         setError("No se encontró el restaurante.");
         setLoading(false);
         return;
@@ -285,7 +285,7 @@ const Reports: React.FC = () => {
       const { data, error: fetchError } = await supabase
         .from("orders")
         .select("total, status, order_type, items, created_at")
-        .eq("restaurant_id", user.restaurant_id)
+        .eq("restaurant_id", restaurantId)
         .gte("created_at", start)
         .lt("created_at", end)
 
@@ -338,19 +338,20 @@ const Reports: React.FC = () => {
       // Daily revenue
       const dailyData: Record<string, { revenue: number; orders: number }> = {};
       orders.forEach((order) => {
-        const date = new Date(order.created_at).toLocaleDateString("es-CO", {
-          month: "short",
-          day: "numeric",
-        });
-        if (!dailyData[date]) {
-          dailyData[date] = { revenue: 0, orders: 0 };
+        const dateKey = getBogotaDate(new Date(order.created_at));
+        if (!dailyData[dateKey]) {
+          dailyData[dateKey] = { revenue: 0, orders: 0 };
         }
-        dailyData[date].revenue += Number(order.total || 0);
-        dailyData[date].orders += 1;
+        dailyData[dateKey].revenue += Number(order.total || 0);
+        dailyData[dateKey].orders += 1;
       });
 
       const dailyRevenue = Object.entries(dailyData)
-        .map(([date, data]) => ({ date, ...data }))
+        .sort(([first], [second]) => first.localeCompare(second))
+        .map(([dateKey, data]) => {
+          const [, month, day] = dateKey.split("-");
+          return { date: `${day}/${month}`, ...data };
+        })
         .slice(-14);
 
       // Order type distribution

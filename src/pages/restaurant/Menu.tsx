@@ -24,7 +24,7 @@ import {
   deleteMenuCategory,
 } from "../../services/restaurantService";
 import type { MenuItem, ProductImage } from "../../config/supabase";
-import { formatCurrency } from "../../utils/helpers";
+import { formatCurrency, getStoredRestaurantId } from "../../utils/helpers";
 import {
   deleteImageFromCloudinary,
   getCloudinaryPublicId,
@@ -49,16 +49,24 @@ const Menu: React.FC = () => {
   const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!user.restaurant_id) return;
+    const restaurantId = getStoredRestaurantId();
+    if (!restaurantId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(false);
+      toast.error("No se encontró el restaurante de la sesión.");
+      return;
+    }
 
-    getMenuCategories(user.restaurant_id).then(({ data }) => {
+    getMenuCategories(restaurantId).then(({ data }) => {
       setMenuCategories(data);
     });
 
-    const subscription = subscribeToMenuItems(user.restaurant_id, (data) => {
+    const subscription = subscribeToMenuItems(restaurantId, (data) => {
       setMenuItems(data);
       setLoading(false);
+    }, (error) => {
+      setLoading(false);
+      toast.error("No se pudo sincronizar el menú", { description: error.message });
     });
 
     return () => {
@@ -334,9 +342,7 @@ const Menu: React.FC = () => {
 
       <CategoryModal
         isOpen={showCategoryModal}
-        restaurantId={
-          JSON.parse(localStorage.getItem("user") || "{}").restaurant_id || ""
-        }
+        restaurantId={getStoredRestaurantId() || ""}
         onClose={() => setShowCategoryModal(false)}
         onCreated={(category) => {
           setMenuCategories((current) => [...current, category]);
@@ -639,8 +645,8 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
       return;
     }
 
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-    if (!user.restaurant_id) {
+    const restaurantId = getStoredRestaurantId();
+    if (!restaurantId) {
       setError("No se encontró el restaurante.");
       return;
     }
@@ -648,7 +654,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
     setLoading(true);
 
     const menuItemData = {
-      restaurant_id: user.restaurant_id,
+      restaurant_id: restaurantId,
       name: formData.name,
       description: formData.description || undefined,
       category_id: formData.category_id || undefined,

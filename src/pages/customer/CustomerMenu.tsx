@@ -97,6 +97,9 @@ const CustomerMenu: React.FC = () => {
       const subscription = subscribeToMenuItems(restaurant.id, (data) => {
         setMenuItems(data);
         setLoading(false);
+      }, (error) => {
+        setLoading(false);
+        toast.error("No se pudo actualizar el menú", { description: error.message });
       });
 
       return () => {

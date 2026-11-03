@@ -46,6 +46,27 @@ export const isValidPhone = (phone: string): boolean => {
 export const normalizePhoneInput = (value: string): string =>
   value.replace(/\D/g, "").slice(0, 10);
 
+export interface StoredRestaurantUser {
+  restaurant_id?: string;
+}
+
+export const getStoredRestaurantUser = (): StoredRestaurantUser => {
+  const rawUser = localStorage.getItem("user");
+  if (!rawUser) return {};
+
+  try {
+    const user: unknown = JSON.parse(rawUser);
+    if (!user || typeof user !== "object") return {};
+    const restaurantId = (user as { restaurant_id?: unknown }).restaurant_id;
+    return typeof restaurantId === "string" ? { restaurant_id: restaurantId } : {};
+  } catch {
+    return {};
+  }
+};
+
+export const getStoredRestaurantId = (): string | undefined =>
+  getStoredRestaurantUser().restaurant_id;
+
 /**
  * Play notification sound
  */

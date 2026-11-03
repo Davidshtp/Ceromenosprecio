@@ -77,6 +77,7 @@ CREATE TABLE public.orders (
   delivery_longitude double precision,
   cash_received numeric,
   change_due numeric,
+  closed_at timestamp with time zone,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );
@@ -103,6 +104,7 @@ CREATE TABLE public.restaurant_hours (
   opening_time time without time zone,
   closing_time time without time zone,
   CONSTRAINT restaurant_hours_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_hours_restaurant_day_unique UNIQUE (restaurant_id, day_of_week),
   CONSTRAINT restaurant_hours_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );
 CREATE TABLE public.restaurant_order_counters (

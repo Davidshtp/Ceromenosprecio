@@ -149,6 +149,7 @@ export interface Order {
   change_due?: number;
   created_at: string;
   updated_at?: string;
+  closed_at?: string | null;
 }
 
 export interface CreateOrderInput {

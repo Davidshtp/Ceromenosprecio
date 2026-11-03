@@ -31,14 +31,16 @@ const validStatusTransitions: Record<Order["status"], Order["status"][]> = {
 export const subscribeToOrders = (
   restaurantId: string,
   callback: (orders: Order[]) => void,
-  onError?: ServiceErrorHandler
+  onError?: ServiceErrorHandler,
+  limit = 200
 ): RealtimeChannel => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
       .select("*")
       .eq("restaurant_id", restaurantId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
     if (error) {
       onError?.(error);
@@ -65,7 +67,14 @@ export const subscribeToOrders = (
         void fetchOrders();
       }
     )
-    .subscribe();
+    .subscribe((status, error) => {
+      if (
+        (status === "CHANNEL_ERROR" || status === "TIMED_OUT") &&
+        error
+      ) {
+        onError?.(toError(error, "No se pudo sincronizar los pedidos en tiempo real."));
+      }
+    });
 
   return subscription;
 };
@@ -92,16 +101,30 @@ export const updateOrderStatus = async (orderId: string, status: Order["status"]
     };
   }
 
-  const { error } = await supabase
+  const isClosing = ["completed", "cancelled", "rejected"].includes(status);
+  const { data: updatedOrder, error } = await supabase
     .from("orders")
-    .update({ status })
-    .eq("id", orderId);
+    .update({
+      status,
+      closed_at: isClosing ? new Date().toISOString() : null,
+    })
+    .eq("id", orderId)
+    .eq("status", currentStatus)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     console.error("Error updating order status:", error);
   }
 
-  return { success: !error, error };
+  if (!error && !updatedOrder) {
+    return {
+      success: false,
+      error: new Error("El pedido cambió en otra pantalla. Actualiza la lista e inténtalo de nuevo."),
+    };
+  }
+
+  return { success: !error && Boolean(updatedOrder), error };
 };
 
 // Subscribe to menu items with real-time updates
@@ -148,7 +171,14 @@ export const subscribeToMenuItems = (
         void fetchItems();
       }
     )
-    .subscribe();
+    .subscribe((status, error) => {
+      if (
+        (status === "CHANNEL_ERROR" || status === "TIMED_OUT") &&
+        error
+      ) {
+        onError?.(toError(error, "No se pudo sincronizar el menú en tiempo real."));
+      }
+    });
 
   return subscription;
 };
