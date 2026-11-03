@@ -4,6 +4,7 @@ export { Select } from "./Select";
 export { Textarea } from "./Textarea";
 export { Card } from "./Card";
 export { Modal } from "./Modal";
+export { useScrollLock } from "./useScrollLock";
 export { Badge } from "./Badge";
 export { Loading } from "./Loading";
 export { Alert } from "./Alert";

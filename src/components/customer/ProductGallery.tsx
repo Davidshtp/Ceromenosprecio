@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, Maximize2, Package, X } from "lucide-react";
 import type { ProductImage } from "../../config/supabase";
+import { useScrollLock } from "../ui";
 
 interface ProductGalleryProps {
   images: ProductImage[];
@@ -19,6 +20,8 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
   const touchStartX = useRef<number | null>(null);
   const didSwipe = useRef(false);
   const expandButtonRef = useRef<HTMLButtonElement>(null);
+
+  useScrollLock(isLightboxOpen);
 
   const safeIndex = images.length > 0 ? Math.min(activeIndex, images.length - 1) : 0;
   const mainImage = images.length > 0 ? images[safeIndex] : null;
@@ -208,7 +211,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
       {isLightboxOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[80] flex flex-col bg-black/95 p-3 text-white sm:p-6"
+            className="fixed inset-0 z-[80] flex flex-col overflow-hidden overscroll-none bg-black/95 p-3 text-white sm:p-6"
             role="dialog"
             aria-modal="true"
             aria-label={`Galería de fotos de ${productName}`}

@@ -69,14 +69,14 @@ CREATE TABLE public.orders (
   payment_method text,
   payment_status text DEFAULT 'pending'::text CHECK (payment_status = ANY (ARRAY['pending'::text, 'paid'::text, 'failed'::text])),
   payment_transaction_id text,
-  cash_received numeric,
-  change_due numeric,
   customer_notes text,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   delivery_address text,
   delivery_latitude double precision,
   delivery_longitude double precision,
+  cash_received numeric,
+  change_due numeric,
   CONSTRAINT orders_pkey PRIMARY KEY (id),
   CONSTRAINT orders_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants(id)
 );

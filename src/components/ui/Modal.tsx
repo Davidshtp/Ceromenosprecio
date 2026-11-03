@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { X } from "lucide-react";
+import { useScrollLock } from "./useScrollLock";
 
 interface ModalProps {
   isOpen: boolean;
@@ -22,14 +23,7 @@ export const Modal: React.FC<ModalProps> = ({
   contentClassName = "p-6",
   position = "center",
 }) => {
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen]);
+  useScrollLock(isOpen);
 
   if (!isOpen) return null;
 
@@ -43,7 +37,7 @@ export const Modal: React.FC<ModalProps> = ({
   const isBottom = position === "bottom";
 
   return (
-      <div className="fixed inset-0 z-50 overflow-y-auto overscroll-contain">
+    <div className="fixed inset-0 z-50 overflow-hidden overscroll-none">
       <style>{`
         @keyframes modal-backdrop-in { from { opacity: 0 } to { opacity: 1 } }
         @keyframes modal-content-in { from { opacity: 0; transform: translateY(16px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
@@ -60,17 +54,16 @@ export const Modal: React.FC<ModalProps> = ({
       />
 
       {/* Modal */}
-          <div
-            className={`flex min-h-full justify-center ${
-              isBottom ? "items-end p-0 sm:items-center sm:p-4" : "items-center p-4"
-            }`}
-            onClick={onClose}
-            style={{ touchAction: 'pan-y' }}
-          >
+      <div
+        className={`flex h-full justify-center ${
+          isBottom ? "items-end p-0 sm:items-center sm:p-4" : "items-center p-4"
+        }`}
+        onClick={onClose}
+      >
         <div
-          className={`relative w-full ${sizes[size]} bg-white shadow-xl modal-content-in ${
+          className={`relative flex max-h-[calc(100dvh-2rem)] w-full min-h-0 flex-col overflow-hidden ${sizes[size]} bg-white shadow-xl modal-content-in ${
             isBottom
-              ? "flex max-h-[92dvh] flex-col overflow-hidden rounded-t-2xl sm:max-h-[90vh] sm:rounded-2xl"
+              ? "max-h-[92dvh] rounded-t-2xl sm:max-h-[90vh] sm:rounded-2xl"
               : "rounded-lg"
           }`}
           onClick={(e) => e.stopPropagation()}
@@ -103,11 +96,8 @@ export const Modal: React.FC<ModalProps> = ({
 
           {/* Content */}
           <div
-            className={
-              isBottom
-                ? `min-h-0 flex-1 overflow-y-auto overscroll-contain ${contentClassName}`
-                : contentClassName
-            }
+            className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${contentClassName}`}
+            style={{ WebkitOverflowScrolling: "touch", touchAction: "pan-y" }}
           >
             {children}
           </div>
