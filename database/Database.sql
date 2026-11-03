@@ -58,7 +58,7 @@ CREATE TABLE public.orders (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   restaurant_id uuid NOT NULL,
   order_number text NOT NULL,
-  order_type text NOT NULL CHECK (order_type = ANY (ARRAY['delivery'::text, 'pickup'::text, 'qr'::text, 'counter'::text, 'phone'::text, 'table'::text])),
+  order_type text NOT NULL CHECK (order_type = ANY (ARRAY['delivery'::text, 'pickup'::text, 'counter'::text])),
   customer_name text,
   customer_phone text,
   items jsonb NOT NULL,

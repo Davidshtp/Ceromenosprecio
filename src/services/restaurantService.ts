@@ -1,22 +1,38 @@
 import { supabase } from "../config/supabase";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import type {
+  CreateMenuItemInput,
+  CreateMenuCategoryInput,
+  CreateOrderInput,
   Order,
   MenuCategory,
   MenuItem,
+  RestaurantStats,
   RestaurantHours,
   RestaurantSettings,
+  UpdateMenuItemInput,
 } from "../config/supabase";
 
-/**
- * Restaurant API Service
- * All restaurant dashboard operations with real-time support
- */
+export type ServiceErrorHandler = (error: Error) => void;
+
+const toError = (error: unknown, fallback: string): Error =>
+  error instanceof Error ? error : new Error(fallback);
+
+const validStatusTransitions: Record<Order["status"], Order["status"][]> = {
+  pending: ["preparing", "rejected", "cancelled"],
+  preparing: ["ready", "cancelled"],
+  ready: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+  rejected: [],
+};
 
 // Subscribe to restaurant's orders with real-time updates
 export const subscribeToOrders = (
   restaurantId: string,
-  callback: (orders: Order[]) => void
-) => {
+  callback: (orders: Order[]) => void,
+  onError?: ServiceErrorHandler
+): RealtimeChannel => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
@@ -24,7 +40,11 @@ export const subscribeToOrders = (
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
+    if (error) {
+      onError?.(error);
+      return;
+    }
+    if (data) {
       callback(data);
     }
   };
@@ -42,7 +62,7 @@ export const subscribeToOrders = (
         filter: `restaurant_id=eq.${restaurantId}`,
       },
       () => {
-        fetchOrders();
+        void fetchOrders();
       }
     )
     .subscribe();
@@ -52,6 +72,26 @@ export const subscribeToOrders = (
 
 // Update order status
 export const updateOrderStatus = async (orderId: string, status: Order["status"]) => {
+  const { data: currentOrder, error: currentOrderError } = await supabase
+    .from("orders")
+    .select("status")
+    .eq("id", orderId)
+    .single();
+
+  if (currentOrderError) {
+    console.error("Error loading current order status:", currentOrderError);
+    return { success: false, error: currentOrderError };
+  }
+
+  const currentStatus = currentOrder.status as Order["status"];
+  const allowedTransitions = validStatusTransitions[currentStatus];
+  if (!allowedTransitions || !allowedTransitions.includes(status)) {
+    return {
+      success: false,
+      error: new Error(`No se puede cambiar de ${currentStatus} a ${status}.`),
+    };
+  }
+
   const { error } = await supabase
     .from("orders")
     .update({ status })
@@ -61,14 +101,15 @@ export const updateOrderStatus = async (orderId: string, status: Order["status"]
     console.error("Error updating order status:", error);
   }
 
-  return !error;
+  return { success: !error, error };
 };
 
 // Subscribe to menu items with real-time updates
 export const subscribeToMenuItems = (
   restaurantId: string,
-  callback: (items: MenuItem[]) => void
-) => {
+  callback: (items: MenuItem[]) => void,
+  onError?: ServiceErrorHandler
+): RealtimeChannel => {
   const fetchItems = async () => {
     const { data, error } = await supabase
       .from("menu_items")
@@ -76,7 +117,11 @@ export const subscribeToMenuItems = (
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
+    if (error) {
+      onError?.(error);
+      return;
+    }
+    if (data) {
       callback(
         (data || []).map((item) => ({
           ...item,
@@ -100,7 +145,7 @@ export const subscribeToMenuItems = (
         filter: `restaurant_id=eq.${restaurantId}`,
       },
       () => {
-        fetchItems();
+        void fetchItems();
       }
     )
     .subscribe();
@@ -109,7 +154,7 @@ export const subscribeToMenuItems = (
 };
 
 // Create menu item
-export const createMenuItem = async (item: Partial<MenuItem>) => {
+export const createMenuItem = async (item: CreateMenuItemInput) => {
   const { data, error } = await supabase
     .from("menu_items")
     .insert([item])
@@ -126,7 +171,7 @@ export const createMenuItem = async (item: Partial<MenuItem>) => {
 // Update menu item
 export const updateMenuItem = async (
   itemId: string,
-  updates: Partial<MenuItem>
+  updates: UpdateMenuItemInput
 ) => {
   const { error } = await supabase
     .from("menu_items")
@@ -172,7 +217,7 @@ export const getAvailableMenuItems = async (restaurantId: string) => {
 };
 
 export const createMenuCategory = async (
-  category: Pick<MenuCategory, "restaurant_id" | "name">
+  category: CreateMenuCategoryInput
 ) => {
   const { data, error } = await supabase
     .from("menu_categories")
@@ -296,7 +341,7 @@ export const deleteMenuItem = async (itemId: string) => {
 };
 
 // Create order (manual or from customer)
-export const createOrder = async (order: Partial<Order>) => {
+export const createOrder = async (order: CreateOrderInput) => {
   const { error } = await supabase
     .from("orders")
     .insert([order]);
@@ -309,31 +354,37 @@ export const createOrder = async (order: Partial<Order>) => {
 };
 
 // Get restaurant stats
-export const getRestaurantStats = async (restaurantId: string) => {
+export const getRestaurantStats = async (
+  restaurantId: string
+): Promise<{ data: RestaurantStats | null; error: Error | null }> => {
   try {
     const today = new Date();
     const todayStart = new Date(today);
     todayStart.setHours(0, 0, 0, 0);
     const thirtyDaysAgo = new Date(todayStart);
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
-    const localDateKey = (date: Date) =>
-      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-        date.getDate()
-      ).padStart(2, "0")}`;
+    const localDateKey = (date: Date) => {
+      const parts = new Intl.DateTimeFormat("en", {
+        timeZone: "America/Bogota",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(date);
+      const values = Object.fromEntries(
+        parts
+          .filter(({ type }) => type !== "literal")
+          .map(({ type, value }) => [type, value])
+      );
+      return `${values.year}-${values.month}-${values.day}`;
+    };
 
     const [
-      { data: todayOrders },
-      { data: pendingOrders },
-      { count: totalOrders },
-      { count: totalMenuItems },
-      { data: recentOrders },
-      { data: salesOrders },
+      pendingResult,
+      totalOrdersResult,
+      totalMenuItemsResult,
+      recentResult,
+      salesResult,
     ] = await Promise.all([
-      supabase
-        .from("orders")
-        .select("total, status")
-        .eq("restaurant_id", restaurantId)
-        .gte("created_at", todayStart.toISOString()),
       supabase
         .from("orders")
         .select("*")
@@ -361,17 +412,35 @@ export const getRestaurantStats = async (restaurantId: string) => {
         .gte("created_at", thirtyDaysAgo.toISOString()),
     ]);
 
-    const completedToday = todayOrders?.filter((o) => o.status === "completed").length || 0;
+    const queryError = [
+      pendingResult.error,
+      totalOrdersResult.error,
+      totalMenuItemsResult.error,
+      recentResult.error,
+      salesResult.error,
+    ].find(Boolean);
+    if (queryError) {
+      throw queryError;
+    }
+
+    const pendingOrders = pendingResult.data ?? [];
+    const recentOrders = recentResult.data ?? [];
+    const salesOrders = salesResult.data ?? [];
+    const todayKey = localDateKey(today);
+    const todayOrders = salesOrders.filter(
+      (order) => localDateKey(new Date(order.created_at)) === todayKey
+    );
+    const completedToday = todayOrders.filter((o) => o.status === "completed").length;
     const revenueToday =
       todayOrders
-        ?.filter((o) => o.status === "completed")
+        .filter((o) => o.status === "completed")
         .reduce((sum, o) => sum + Number(o.total || 0), 0) || 0;
 
     const dailySales = Array.from({ length: 30 }, (_, index) => {
       const date = new Date(thirtyDaysAgo);
       date.setDate(thirtyDaysAgo.getDate() + index);
       const dateKey = localDateKey(date);
-      const dayOrders = (salesOrders || []).filter(
+      const dayOrders =       salesOrders.filter(
         (order) =>
           order.status === "completed" &&
           localDateKey(new Date(order.created_at)) === dateKey
@@ -388,28 +457,21 @@ export const getRestaurantStats = async (restaurantId: string) => {
     });
 
     return {
+      data: {
       pendingOrders: pendingOrders?.length || 0,
       completedToday,
       revenueToday,
-      totalOrders: totalOrders || 0,
-      todayOrders: completedToday,
+      totalOrders: totalOrdersResult.count || 0,
+      todayOrders: todayOrders.length,
       todayRevenue: revenueToday,
-      totalMenuItems: totalMenuItems || 0,
+      totalMenuItems: totalMenuItemsResult.count || 0,
       recentOrders: recentOrders || [],
       dailySales,
+      },
+      error: null,
     };
   } catch (error) {
     console.error("Error fetching restaurant stats:", error);
-    return {
-      pendingOrders: 0,
-      completedToday: 0,
-      revenueToday: 0,
-      totalOrders: 0,
-      todayOrders: 0,
-      todayRevenue: 0,
-      totalMenuItems: 0,
-      recentOrders: [],
-      dailySales: [],
-    };
+    return { data: null, error: toError(error, "No se pudieron cargar las estadísticas.") };
   }
 };

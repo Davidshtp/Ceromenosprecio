@@ -38,12 +38,8 @@ const RestaurantSettings: React.FC = () => {
         setSettings(
           settingsData.settings || {
             restaurant_id: user.restaurant_id,
-            display_name: data.name,
-            description: "",
             whatsapp: "",
             instagram_url: "",
-            primary_color: "#111827",
-            secondary_color: "#F59E0B",
             delivery_enabled: true,
             pickup_enabled: true,
             is_temporarily_closed: false,

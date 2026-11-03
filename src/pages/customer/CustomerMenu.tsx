@@ -130,17 +130,12 @@ const CustomerMenu: React.FC = () => {
       return true;
     }
 
-    if (today.second_opening_time && today.second_closing_time) {
-      return isWithinRange(today.second_opening_time, today.second_closing_time);
-    }
-
     return false;
   };
 
   const restaurantIsOpen = isOpenNow();
 
-  const restaurantName = settings?.display_name || restaurant?.name || "Cero Menosprecio";
-  const restaurantLogo = settings?.logo_url || restaurant?.logo_url;
+  const restaurantName = restaurant?.name || "Cero Menosprecio";
   const primaryColor = "#000000";
   const secondaryColor = "#FACC15";
   const heroImage =
@@ -149,8 +144,7 @@ const CustomerMenu: React.FC = () => {
     )?.product_images?.[0]?.url ||
     menuItems.find(
       (i) => i.is_available && (i.product_images?.[0]?.url || i.image_url)
-    )?.image_url ||
-    restaurantLogo;
+    )?.image_url;
 
   const whatsappLink = useMemo(() => {
     if (!settings?.whatsapp) return null;
@@ -327,7 +321,7 @@ const CustomerMenu: React.FC = () => {
 
   return (
     <div
-      className="mono-interface min-h-screen bg-white overflow-y-auto pb-24 no-scrollbar"
+      className="mono-interface min-h-screen bg-white pb-24 no-scrollbar"
       style={{
         ...styleVars,
         scrollbarWidth: "none",
@@ -680,11 +674,6 @@ const CustomerMenu: React.FC = () => {
                       }`}
                     >
                       {hour.opening_time || "00:00"} – {hour.closing_time || "00:00"}
-                      {hour.second_opening_time && hour.second_closing_time && (
-                        <span className="ml-1">
-                          · {hour.second_opening_time} – {hour.second_closing_time}
-                        </span>
-                      )}
                     </span>
                   ) : (
                     <span
@@ -1031,7 +1020,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
               Tu pedido ha sido enviado. El restaurante lo preparará en breve. Te contactaremos por WhatsApp.
             </p>
             <div className="w-full border-t-2 border-yellow-400/30 pt-5">
-              <Button onClick={() => { onSuccess(); window.scrollTo({ top: 0, behavior: 'smooth' }); const el = document.querySelector('.mono-interface'); if (el) (el as HTMLElement).scrollTo({ top: 0, behavior: 'smooth' }); }} fullWidth size="lg">
+              <Button onClick={onSuccess} fullWidth size="lg">
                 OK, entendido
               </Button>
             </div>

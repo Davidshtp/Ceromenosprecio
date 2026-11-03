@@ -2,12 +2,16 @@ import React, { useCallback, useEffect, useState } from "react";
 import { ShoppingBag, UtensilsCrossed, DollarSign, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, Badge, Loading } from "../../components/ui";
-import { getRestaurantStats } from "../../services/restaurantService";
+import {
+  getRestaurantStats,
+  subscribeToOrders,
+} from "../../services/restaurantService";
 import { formatCurrency } from "../../utils/helpers";
+import type { RestaurantStats } from "../../config/supabase";
 
 const RestaurantHome: React.FC = () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<RestaurantStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [salesPeriod, setSalesPeriod] = useState<7 | 30>(7);
 
@@ -15,18 +19,56 @@ const RestaurantHome: React.FC = () => {
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     if (!user.restaurant_id) return;
 
-    const data = await getRestaurantStats(user.restaurant_id);
-    setStats(data);
+    const result = await getRestaurantStats(user.restaurant_id);
+    if (result.error) {
+      setError(result.error.message);
+    } else {
+      setError(null);
+      setStats(result.data);
+    }
     setLoading(false);
   }, []);
 
   useEffect(() => {
+    // The initial load synchronizes the dashboard with the external data source.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadStats();
+
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (!user.restaurant_id) return;
+
+    const subscription = subscribeToOrders(
+      user.restaurant_id,
+      () => {
+        void loadStats();
+      },
+      (subscriptionError) => {
+        setError(subscriptionError.message);
+      }
+    );
+
+    const refreshInterval = window.setInterval(() => {
+      void loadStats();
+    }, 15000);
+
+    return () => {
+      subscription.unsubscribe();
+      window.clearInterval(refreshInterval);
+    };
   }, [loadStats]);
 
   if (loading) {
     return <Loading text="Cargando resumen..." />;
+  }
+  if (error || !stats) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-danger mb-3">{error || "No hay datos disponibles."}</p>
+        <button className="btn-primary" onClick={() => void loadStats()}>
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   const statCards = [
@@ -258,7 +300,7 @@ const RestaurantHome: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {stats.recentOrders.slice(0, 5).map((order: { id: string; order_number?: number; customer_name?: string; total?: number; status?: string; order_type?: string; items?: unknown[] }) => (
+            {stats.recentOrders.slice(0, 5).map((order) => (
               <div
                 key={order.id}
                 className="flex items-center justify-between p-3 bg-bg-subtle rounded-lg"
@@ -268,7 +310,13 @@ const RestaurantHome: React.FC = () => {
                     Pedido #{order.order_number}
                   </p>
                   <p className="text-sm text-text-secondary">
-                    {order.order_type === "delivery" ? "Domicilio" : "Recogida"} •{" "}
+                    {order.order_type === "delivery"
+                      ? "Domicilio"
+                      : order.order_type === "pickup"
+                      ? "Recogida"
+                      : order.order_type === "counter"
+                      ? "Venta local"
+                      : "Otro"} •{" "}
                     {order.items?.length || 0} productos
                   </p>
                 </div>

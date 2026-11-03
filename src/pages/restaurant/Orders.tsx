@@ -148,9 +148,9 @@ const Orders: React.FC = () => {
     orderId: string,
     newStatus: Order["status"]
   ) => {
-    const success = await updateOrderStatus(orderId, newStatus);
-    if (!success) {
-      toast.error("No se pudo actualizar el pedido");
+    const result = await updateOrderStatus(orderId, newStatus);
+    if (!result.success) {
+      toast.error(result.error?.message || "No se pudo actualizar el pedido");
     }
   };
 
@@ -199,9 +199,9 @@ const Orders: React.FC = () => {
       ? "Domicilio"
       : order.order_type === "pickup"
       ? "Recogida"
-      : order.table_number
-      ? `Mesa ${order.table_number}`
-      : "Para llevar";
+      : order.order_type === "counter"
+      ? "Venta local"
+      : "Otro";
 
   const getOrderAccent = (status: string) =>
     ({
@@ -614,7 +614,6 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
                 Cómo llegar
               </a>
             )}
-            {order.table_number && <p><strong>Mesa:</strong> {order.table_number}</p>}
             {order.payment_method && (
               <p>
                 <strong>Método de pago:</strong>{" "}
@@ -831,7 +830,6 @@ const LocalSaleModal: React.FC<LocalSaleModalProps> = ({
       })),
       subtotal,
       total,
-      status: "pending",
       customer_notes: notes.trim() || undefined,
     });
     setLoading(false);
@@ -850,7 +848,7 @@ const LocalSaleModal: React.FC<LocalSaleModalProps> = ({
     <Modal isOpen={isOpen} onClose={onClose} title="Registrar venta local" size="xl" contentClassName="p-0">
       <form onSubmit={submit} className="local-sale-modal">
         <div className="border-b border-border px-6 py-2 text-xs text-text-secondary">
-          Toca los productos que vendiste. Cliente y mesa son opcionales.
+          Toca los productos que vendiste. Los datos del cliente son opcionales.
         </div>
         <div className="grid min-h-0 md:min-h-[560px] md:grid-cols-[1.2fr_0.8fr]">
           <div className="border-b border-border p-4 sm:p-6 md:border-b-0 md:border-r">

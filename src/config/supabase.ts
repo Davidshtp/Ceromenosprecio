@@ -15,7 +15,6 @@ export interface Restaurant {
   id: string;
   name: string;
   slug: string;
-  logo_url?: string;
   status: "active" | "blocked" | "trial";
   is_active: boolean;
   created_at: string;
@@ -25,13 +24,6 @@ export interface Restaurant {
 export interface RestaurantSettings {
   id?: string;
   restaurant_id: string;
-  display_name: string;
-  description?: string;
-  logo_url?: string;
-  banner_url?: string;
-  primary_color: string;
-  secondary_color: string;
-  phone?: string;
   whatsapp?: string;
   instagram_url?: string;
   address?: string;
@@ -48,8 +40,6 @@ export interface RestaurantHours {
   is_open: boolean;
   opening_time?: string;
   closing_time?: string;
-  second_opening_time?: string;
-  second_closing_time?: string;
 }
 
 export interface RestaurantSession {
@@ -79,11 +69,41 @@ export interface MenuItem {
   product_images?: ProductImage[];
   ingredients?: string[];
   is_available: boolean;
-  is_featured?: boolean;
   sizes?: MenuItemOption[];
   addons?: MenuItemOption[];
-  display_order?: number;
   created_at: string;
+}
+
+export interface CreateMenuItemInput {
+  restaurant_id: string;
+  category_id?: string;
+  name: string;
+  description?: string;
+  base_price: number;
+  image_url?: string;
+  product_images?: ProductImage[];
+  ingredients?: string[];
+  is_available: boolean;
+  sizes?: MenuItemOption[];
+  addons?: MenuItemOption[];
+}
+
+export interface UpdateMenuItemInput {
+  category_id?: string;
+  name?: string;
+  description?: string;
+  base_price?: number;
+  image_url?: string;
+  product_images?: ProductImage[];
+  ingredients?: string[];
+  is_available?: boolean;
+  sizes?: MenuItemOption[];
+  addons?: MenuItemOption[];
+}
+
+export interface CreateMenuCategoryInput {
+  restaurant_id: string;
+  name: string;
 }
 
 export interface ProductImage {
@@ -106,8 +126,7 @@ export interface Order {
   id: string;
   restaurant_id: string;
   order_number: string;
-  order_type: "delivery" | "pickup" | "qr" | "counter" | "phone" | "table";
-  table_number?: string;
+  order_type: "delivery" | "pickup" | "counter";
   customer_name?: string;
   customer_phone?: string;
   delivery_address?: string;
@@ -128,13 +147,60 @@ export interface Order {
   payment_method?: "cash" | "transfer";
   cash_received?: number;
   change_due?: number;
-  internal_notes?: string;
-  preparing_at?: string;
-  ready_at?: string;
-  completed_at?: string;
-  cancelled_at?: string;
   created_at: string;
   updated_at?: string;
+}
+
+export interface CreateOrderInput {
+  restaurant_id: string;
+  order_type: Order["order_type"];
+  customer_name?: string;
+  customer_phone?: string;
+  delivery_address?: string;
+  delivery_latitude?: number;
+  delivery_longitude?: number;
+  items: OrderItem[];
+  subtotal: number;
+  discount?: number;
+  total: number;
+  customer_notes?: string;
+  payment_method?: Order["payment_method"];
+  cash_received?: number;
+  change_due?: number;
+}
+
+export interface UpdateOrderStatusInput {
+  orderId: string;
+  status: Order["status"];
+}
+
+export interface DailySale {
+  date: string;
+  orders: number;
+  revenue: number;
+}
+
+export interface RecentOrder {
+  id: string;
+  order_number: string;
+  customer_name?: string;
+  total: number;
+  status: Order["status"];
+  order_type: Order["order_type"];
+  items: OrderItem[];
+  created_at: string;
+}
+
+export interface RestaurantStats {
+  pendingOrders: number;
+  completedToday: number;
+  revenueToday: number;
+  totalOrders: number;
+  todayOrders: number;
+  todayRevenue: number;
+  totalMenuItems: number;
+  recentOrders: RecentOrder[];
+  dailySales: DailySale[];
 }
 
 export interface OrderItem {
