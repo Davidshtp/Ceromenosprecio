@@ -44,6 +44,7 @@ CREATE TABLE public.menu_items (
   base_price numeric NOT NULL CHECK (base_price >= 0::numeric),
   image_url text,
   badge_label text,
+  approximate_weight text,
   is_available boolean NOT NULL DEFAULT true,
   sizes jsonb DEFAULT '[]'::jsonb,
   addons jsonb DEFAULT '[]'::jsonb,

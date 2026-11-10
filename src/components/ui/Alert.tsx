@@ -7,6 +7,7 @@ interface AlertProps {
   message: string;
   onClose?: () => void;
   className?: string;
+  variant?: "default" | "brand";
 }
 
 export const Alert: React.FC<AlertProps> = ({
@@ -15,6 +16,7 @@ export const Alert: React.FC<AlertProps> = ({
   message,
   onClose,
   className = "",
+  variant = "default",
 }) => {
   const styles = {
     success: {
@@ -45,6 +47,27 @@ export const Alert: React.FC<AlertProps> = ({
 
   const config = styles[type];
   const Icon = config.icon;
+
+  if (variant === "brand") {
+    return (
+      <div role="status" className={`border-2 border-black bg-yellow-50 p-4 shadow-[4px_4px_0_0_#facc15] ${className}`}>
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center border-2 border-black bg-yellow-400 text-black">
+            <Icon aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            {title && <h4 className="mb-1 text-sm font-black uppercase tracking-wide text-black">{title}</h4>}
+            <p className="text-sm leading-relaxed text-black/75">{message}</p>
+          </div>
+          {onClose && (
+            <button type="button" onClick={onClose} aria-label="Cerrar aviso" className="p-1 text-black hover:bg-yellow-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-black">
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

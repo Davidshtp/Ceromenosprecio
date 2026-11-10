@@ -69,6 +69,7 @@ export interface MenuItem {
   product_images?: ProductImage[];
   ingredients?: string[];
   badge_label?: string | null;
+  approximate_weight?: string | null;
   is_available: boolean;
   sizes?: MenuItemOption[];
   addons?: MenuItemOption[];
@@ -85,6 +86,7 @@ export interface CreateMenuItemInput {
   product_images?: ProductImage[];
   ingredients?: string[];
   badge_label?: string | null;
+  approximate_weight?: string | null;
   is_available: boolean;
   sizes?: MenuItemOption[];
   addons?: MenuItemOption[];
@@ -99,6 +101,7 @@ export interface UpdateMenuItemInput {
   product_images?: ProductImage[];
   ingredients?: string[];
   badge_label?: string | null;
+  approximate_weight?: string | null;
   is_available?: boolean;
   sizes?: MenuItemOption[];
   addons?: MenuItemOption[];

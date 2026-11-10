@@ -3,6 +3,8 @@ import { Images, Minus, Package, Plus } from "lucide-react";
 import type { MenuItem } from "../../config/supabase";
 import { formatCurrency } from "../../utils/helpers";
 import { getMenuItemMinPrice, getProductImages } from "../../utils/menuItem";
+import { ProductWeight } from "../ui/ProductWeight";
+import { ProductLabel } from "../ui/ProductLabel";
 
 interface ProductCardProps {
   item: MenuItem;
@@ -27,7 +29,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const minPrice = getMenuItemMinPrice({ base_price: item.base_price, sizes: item.sizes });
   const hasSizes = Boolean(item.sizes && item.sizes.length > 0);
   const canAdd = restaurantIsOpen && item.is_available;
-  const badgeLabel = item.badge_label?.trim();
 
   const handleAdd = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -63,11 +64,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       aria-label={`Ver ${item.name}`}
     >
       <div className="relative aspect-square overflow-hidden bg-zinc-100">
-        {badgeLabel && (
-          <span className="absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 truncate bg-yellow-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-sm sm:text-[10px]">
-            {badgeLabel}
-          </span>
-        )}
+        <ProductLabel
+          label={item.badge_label}
+          compact
+          className="absolute left-2 top-2 z-10 max-w-[calc(100%-1.25rem)] sm:left-3 sm:top-3 sm:max-w-[calc(100%-1.75rem)]"
+        />
         {cover ? (
           <img
             src={cover}
@@ -101,6 +102,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </p>
         )}
         <h3 className="mt-1.5 line-clamp-2 text-base font-black leading-tight text-black sm:text-lg">{item.name}</h3>
+        <ProductWeight weight={item.approximate_weight} className="mt-2 self-start" />
         {item.description && (
           <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-black/60 sm:text-sm">{item.description}</p>
         )}

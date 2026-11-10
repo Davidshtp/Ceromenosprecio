@@ -24,6 +24,8 @@ import {
   deleteMenuCategory,
 } from "../../services/restaurantService";
 import type { MenuItem, ProductImage } from "../../config/supabase";
+import { ProductWeight } from "../../components/ui/ProductWeight";
+import { ProductLabel } from "../../components/ui/ProductLabel";
 import { formatCurrency, getStoredRestaurantId } from "../../utils/helpers";
 import {
   deleteImageFromCloudinary,
@@ -262,6 +264,12 @@ const Menu: React.FC = () => {
                         {item.sizes?.length ? <span>{item.sizes.length} tamaños</span> : null}
                         {item.addons?.length ? <span>{item.addons.length} adicionales</span> : null}
                       </div>
+                      {(item.badge_label?.trim() || item.approximate_weight?.trim()) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-3">
+                          <ProductLabel label={item.badge_label} />
+                          <ProductWeight weight={item.approximate_weight} />
+                        </div>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border pt-2 sm:border-t-0 sm:pt-0">
                       <Button
@@ -587,6 +595,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
     category_id: "",
     base_price: "",
     badge_label: "",
+    approximate_weight: "",
     product_images: [] as ProductImage[],
     ingredients: [] as string[],
     is_available: true,
@@ -606,6 +615,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
         category_id: item.category_id || "",
         base_price: item.base_price.toString(),
         badge_label: item.badge_label || "",
+        approximate_weight: item.approximate_weight || "",
         product_images:
           item.product_images?.length
             ? item.product_images
@@ -624,6 +634,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
         category_id: "",
         base_price: "",
         badge_label: "",
+        approximate_weight: "",
         product_images: [],
         ingredients: [],
         is_available: true,
@@ -663,6 +674,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
       category_id: formData.category_id || undefined,
       base_price: parseFloat(formData.base_price),
       badge_label: formData.badge_label.trim() || null,
+      approximate_weight: formData.approximate_weight.trim() || null,
       image_url: formData.product_images[0].url,
       product_images: formData.product_images,
       ingredients: formData.ingredients,
@@ -834,12 +846,32 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
         />
 
         <Input
+          id={`${mode}-badge-label`}
           label="Etiqueta (opcional)"
           value={formData.badge_label}
           onChange={(e) =>
             setFormData({ ...formData, badge_label: e.target.value })
           }
           placeholder="Ej.: Más vendida, Nuevo, Recomendado"
+          helperText="El icono se elige automáticamente según el texto de la etiqueta."
+        />
+        {formData.badge_label.trim() && (
+          <div className="space-y-2">
+            <p className="text-xs text-text-secondary">Vista previa de la etiqueta</p>
+            <ProductLabel label={formData.badge_label} />
+          </div>
+        )}
+
+        <Input
+          id={`${mode}-approximate-weight`}
+          label="Peso aproximado (opcional)"
+          value={formData.approximate_weight}
+          onChange={(e) =>
+            setFormData({ ...formData, approximate_weight: e.target.value })
+          }
+          placeholder="Ej.: 250 g o 1,2 kg"
+          maxLength={40}
+          helperText="Incluye la unidad. Déjalo vacío para no mostrar el peso."
         />
 
         <div className="grid sm:grid-cols-2 gap-4">

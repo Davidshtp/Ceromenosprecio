@@ -75,6 +75,12 @@ database/Database.sql              # Esquema de referencia
 
 ## Base de datos
 
+Para habilitar el peso aproximado opcional de los productos en una base existente, ejecuta
+`database/migrations/20261110_menu_item_approximate_weight.sql` en el editor SQL de Supabase
+antes de desplegar el frontend. Agrega una columna nullable sin modificar los productos existentes.
+El campo admite el peso con su unidad (por ejemplo, `250 g` o `1,2 kg`); al dejarlo vacío
+se guarda como `NULL` y no aparece en las tarjetas ni en el detalle.
+
 El esquema de referencia está en `database/Database.sql`. La tabla `orders` incluye `payment_method`, `cash_received`, `change_due` y `delivery_latitude/longitude`. Hay un trigger `set_order_number` que genera el número de pedido; **no eliminar la tabla `restaurant_order_counters`**.
 
 ## ¿Qué resuelve?
