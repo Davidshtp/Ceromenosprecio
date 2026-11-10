@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   ShoppingCart,
@@ -12,6 +12,8 @@ import {
   Utensils,
   Flame,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Instagram,
 } from "lucide-react";
 import { Card, Button, Input, Modal } from "../../components/ui";
@@ -53,6 +55,72 @@ const CustomerMenu: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [showHoursModal, setShowHoursModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
+  const featuredScrollRef = useRef<HTMLDivElement>(null);
+  const [featuredCanLeft, setFeaturedCanLeft] = useState(false);
+  const [featuredCanRight, setFeaturedCanRight] = useState(false);
+  const [featuredActive, setFeaturedActive] = useState(0);
+
+  const updateFeaturedScroll = useCallback(() => {
+    const el = featuredScrollRef.current;
+    if (!el) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    setFeaturedCanLeft(el.scrollLeft > 4);
+    setFeaturedCanRight(el.scrollLeft < maxScroll - 4);
+    const children = Array.from(el.children) as HTMLElement[];
+    if (children.length === 0) return;
+
+    const baseLeft = children[0].offsetLeft;
+    let active = 0;
+    let minDist = Infinity;
+    children.forEach((child, index) => {
+      const dist = Math.abs(child.offsetLeft - baseLeft - el.scrollLeft);
+      if (dist < minDist) {
+        minDist = dist;
+        active = index;
+      }
+    });
+    if (el.scrollLeft >= maxScroll - 4) {
+      active = children.length - 1;
+    }
+    setFeaturedActive(active);
+  }, []);
+
+  const scrollFeatured = useCallback((direction: "left" | "right") => {
+    const el = featuredScrollRef.current;
+    if (!el) return;
+    const children = Array.from(el.children) as HTMLElement[];
+    if (children.length === 0) return;
+
+    const baseLeft = children[0].offsetLeft;
+    let active = 0;
+    let minDist = Infinity;
+    children.forEach((child, index) => {
+      const dist = Math.abs(child.offsetLeft - baseLeft - el.scrollLeft);
+      if (dist < minDist) {
+        minDist = dist;
+        active = index;
+      }
+    });
+
+    const target = Math.min(
+      Math.max(active + (direction === "left" ? -1 : 1), 0),
+      children.length - 1
+    );
+    el.scrollTo({
+      left: children[target].offsetLeft - baseLeft,
+      behavior: "smooth",
+    });
+  }, []);
+
+  const scrollFeaturedTo = useCallback((index: number) => {
+    const el = featuredScrollRef.current;
+    if (!el) return;
+    const children = Array.from(el.children) as HTMLElement[];
+    const child = children[index];
+    if (!child) return;
+    const baseLeft = children[0].offsetLeft;
+    el.scrollTo({ left: child.offsetLeft - baseLeft, behavior: "smooth" });
+  }, []);
 
   const loadRestaurant = useCallback(async () => {
     if (!slug) return;
@@ -195,6 +263,11 @@ const CustomerMenu: React.FC = () => {
       categoryFilter === "all" || item.category_name === categoryFilter;
     return matchesSearch && matchesCategory && item.is_available;
   });
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => updateFeaturedScroll());
+    return () => window.cancelAnimationFrame(id);
+  }, [filteredItems, updateFeaturedScroll]);
 
   const activeItem = selectedItem
     ? menuItems.find((item) => item.id === selectedItem.id) ?? selectedItem
@@ -461,7 +534,7 @@ const CustomerMenu: React.FC = () => {
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45" />
             <input
               type="text"
-              placeholder="Buscar salchipapas, hamburguesas..."
+              placeholder="Buscar salchipapas ..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Buscar productos"
@@ -503,45 +576,70 @@ const CustomerMenu: React.FC = () => {
               </div>
               <span className="hidden shrink-0 text-xs font-bold text-black/45 sm:block">{filteredItems.length} {filteredItems.length === 1 ? "producto" : "productos"}</span>
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
-              {filteredItems.slice(0, 3).map((item, index) => (
-                <ProductCard
-                  key={`featured-${item.id}`}
-                  item={item}
-                  quantity={getItemQuantity(item.id)}
-                  restaurantIsOpen={restaurantIsOpen}
-                  onOpen={handleItemClick}
-                  onAdd={handleAddSimple}
-                  onRemove={(product) => handleRemoveItem(product.id)}
-                  isMoreSold={index === 0}
-                />
-              ))}
-            </div>
-
-            {filteredItems.length > 3 && (
-              <div className="mt-12 border-t-2 border-black/10 pt-9 sm:mt-16 sm:pt-12">
-                <div className="mb-6 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-black/45">El antojo no termina</p>
-                    <h3 className="text-2xl font-black uppercase leading-none tracking-tight sm:text-3xl">TODAS LAS <span className="text-yellow-500">GROSERÍAS</span></h3>
-                  </div>
-                  <span className="shrink-0 text-xs font-bold text-black/45">{filteredItems.length} opciones</span>
-                </div>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">
-                  {filteredItems.slice(3).map((item) => (
+            <div className="relative sm:px-12 lg:px-14">
+              {filteredItems.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => scrollFeatured("left")}
+                    disabled={!featuredCanLeft}
+                    aria-label="Ver productos anteriores"
+                    className="absolute left-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-black bg-white text-black shadow-sm transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-30 sm:flex"
+                  >
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollFeatured("right")}
+                    disabled={!featuredCanRight}
+                    aria-label="Ver más productos"
+                    className="absolute right-0 top-1/2 z-10 hidden h-10 w-10 -translate-y-1/2 items-center justify-center border-2 border-black bg-white text-black shadow-sm transition hover:bg-yellow-400 disabled:cursor-not-allowed disabled:opacity-30 sm:flex"
+                  >
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </>
+              )}
+              <div
+                ref={featuredScrollRef}
+                onScroll={updateFeaturedScroll}
+                className="grid grid-cols-1 gap-4 sm:flex sm:snap-x sm:snap-mandatory sm:gap-5 sm:overflow-x-auto sm:scroll-smooth sm:pb-4 sm:scrollbar-hide"
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+              >
+                {filteredItems.map((item, index) => (
+                  <div
+                    key={`featured-${item.id}`}
+                    className="sm:w-[calc(50%-10px)] sm:shrink-0 sm:snap-start lg:w-[calc(33.333%-14px)]"
+                  >
                     <ProductCard
-                      key={item.id}
                       item={item}
                       quantity={getItemQuantity(item.id)}
                       restaurantIsOpen={restaurantIsOpen}
                       onOpen={handleItemClick}
                       onAdd={handleAddSimple}
                       onRemove={(product) => handleRemoveItem(product.id)}
+                      isMoreSold={index === 0}
+                    />
+                  </div>
+                ))}
+              </div>
+              {filteredItems.length > 1 && (
+                <div className="mt-5 hidden items-center justify-center gap-3 sm:flex">
+                  {filteredItems.map((item, index) => (
+                    <button
+                      key={`featured-dot-${item.id}`}
+                      type="button"
+                      onClick={() => scrollFeaturedTo(index)}
+                      aria-label={`Ir al producto ${index + 1}`}
+                      className={`h-2.5 border-2 border-black transition-all ${
+                        index === featuredActive
+                          ? "w-10 bg-black"
+                          : "w-5 bg-white hover:bg-yellow-400"
+                      }`}
                     />
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </>
         )}
       </section>
