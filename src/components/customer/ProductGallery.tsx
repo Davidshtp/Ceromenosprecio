@@ -125,8 +125,8 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
           <img
             src={mainImage.url}
             alt={`${productName} ${safeIndex + 1}`}
-            className={`h-full w-full transition-transform duration-700 group-hover:scale-[1.02] ${
-              imageFit === "contain" ? "object-contain" : "object-cover"
+            className={`h-full w-full bg-white transition-transform duration-700 group-hover:scale-[1.02] ${
+              imageFit === "contain" ? "object-contain p-2" : "object-cover"
             }`}
             loading="eager"
             decoding="async"
@@ -199,7 +199,7 @@ export const ProductGallery: React.FC<ProductGalleryProps> = ({
               <img
                 src={image.url}
                 alt=""
-                className="h-full w-full object-cover"
+                className="h-full w-full bg-white object-contain p-0.5"
                 loading="lazy"
                 decoding="async"
               />

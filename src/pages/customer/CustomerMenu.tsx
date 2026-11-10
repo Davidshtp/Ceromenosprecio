@@ -418,14 +418,27 @@ const CustomerMenu: React.FC = () => {
             <div aria-hidden="true" className="absolute -inset-2 rotate-2 bg-yellow-400 sm:-inset-3" />
             <div className="relative aspect-[5/4] overflow-hidden border-4 border-black bg-zinc-900 sm:aspect-[4/3]">
               {heroImage ? (
-                <img src={heroImage} alt="Salchipapas de Cero Menosprecio" className="h-full w-full object-cover" fetchPriority="high" />
+                <>
+                  <img
+                    src={heroImage}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 h-full w-full scale-110 object-cover opacity-35 blur-xl"
+                  />
+                  <img
+                    src={heroImage}
+                    alt="Salchipapas de Cero Menosprecio"
+                    className="relative z-[1] h-full w-full object-contain p-3 sm:p-4"
+                    fetchPriority="high"
+                  />
+                </>
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <Utensils className="h-12 w-12 text-black" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-3 p-4 sm:p-6">
+              <div className="absolute inset-0 z-[2] bg-gradient-to-t from-black/75 via-black/5 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 z-[3] flex items-end justify-between gap-3 p-4 sm:p-6">
                 <div>
                   <span className="inline-block bg-yellow-400 px-2 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-black sm:text-[10px]">Cero tacañería</span>
                   <p className="mt-2 text-xl font-black uppercase leading-none text-white sm:text-3xl">Puro exceso.<br />Cero miedo.</p>
@@ -737,13 +750,13 @@ const CartModal: React.FC<CartModalProps> = ({
                     className="flex items-center gap-4 border-2 border-black/10 p-3 bg-white"
                   >
                     <div className="flex-shrink-0 w-16 h-16 overflow-hidden border-2 border-black/10">
-                      {(item.product_images?.[0]?.url || item.image_url) && (
-                        <img
-                          src={item.product_images?.[0]?.url || item.image_url}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      )}
+                        {(item.product_images?.[0]?.url || item.image_url) && (
+                          <img
+                            src={item.product_images?.[0]?.url || item.image_url}
+                            alt={item.name}
+                            className="h-full w-full bg-white object-contain p-1"
+                          />
+                        )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-black uppercase text-sm text-black">{item.name}</h4>

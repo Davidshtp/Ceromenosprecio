@@ -26,9 +26,9 @@ export const getCloudinaryPublicId = (url: string) => {
 };
 
 const transformations: Record<CloudinaryImageUse, string> = {
-  logo: "c_fill,w_320,h_320,g_auto,q_auto,f_auto",
-  banner: "c_fill,w_1600,h_560,g_auto,q_auto,f_auto",
-  product: "c_fill,w_900,h_700,g_auto,q_auto,f_auto",
+  logo: "c_pad,w_320,h_320,b_auto,q_auto,f_auto",
+  banner: "c_limit,w_1600,h_560,q_auto,f_auto",
+  product: "c_limit,w_1200,q_auto,f_auto",
 };
 
 export const uploadImageToCloudinary = async (
@@ -92,5 +92,20 @@ export const getCloudinaryImageUrl = (
   use: CloudinaryImageUse
 ) => {
   if (!url.includes("res.cloudinary.com")) return url;
-  return url.replace("/upload/", `/upload/${transformations[use]}/`);
+
+  const transform = transformations[use];
+  const marker = "/upload/";
+  const index = url.indexOf(marker);
+  if (index < 0) return url;
+
+  const prefix = url.slice(0, index + marker.length);
+  const rest = url.slice(index + marker.length);
+  const segments = rest.split("/");
+
+  if (segments[0] && (segments[0].includes(",") || segments[0].startsWith("c_") || segments[0].startsWith("w_") || segments[0].startsWith("h_"))) {
+    segments[0] = transform;
+    return `${prefix}${segments.join("/")}`;
+  }
+
+  return `${prefix}${transform}/${rest}`;
 };

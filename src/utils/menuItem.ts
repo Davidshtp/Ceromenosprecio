@@ -1,4 +1,5 @@
 import type { MenuItem, MenuItemOption, ProductImage } from "../config/supabase";
+import { getCloudinaryImageUrl } from "../services/cloudinaryService";
 
 export const getProductImages = (
   item: Pick<MenuItem, "product_images" | "image_url">
@@ -8,14 +9,14 @@ export const getProductImages = (
   if (Array.isArray(item.product_images)) {
     for (const image of item.product_images) {
       if (!image || typeof image.url !== "string") continue;
-      const url = image.url.trim();
+      const url = getCloudinaryImageUrl(image.url.trim(), "product");
       if (!url) continue;
       images.push({ ...image, url });
     }
   }
 
   if (typeof item.image_url === "string") {
-    const url = item.image_url.trim();
+    const url = getCloudinaryImageUrl(item.image_url.trim(), "product");
     if (url) {
       images.push({ url });
     }

@@ -232,15 +232,15 @@ const Menu: React.FC = () => {
                   }`}
                 >
                   <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl bg-bg-subtle sm:h-20 sm:w-28">
+                    <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl bg-white sm:h-20 sm:w-28">
                       {(item.product_images?.[0]?.url || item.image_url) ? (
                         <img
                           src={item.product_images?.[0]?.url || item.image_url}
                           alt={item.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain p-1"
                         />
                       ) : (
-                        <div className="flex h-full items-center justify-center text-text-secondary">
+                        <div className="flex h-full items-center justify-center bg-bg-subtle text-text-secondary">
                           <Package className="h-6 w-6 opacity-50" />
                         </div>
                       )}
@@ -882,8 +882,8 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
           {formData.product_images.length > 0 ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {formData.product_images.map((image, index) => (
-                <div key={`${image.url}-${index}`} className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-bg-subtle">
-                  <img src={image.url} alt={`Foto ${index + 1}`} className="h-full w-full object-cover" />
+                <div key={`${image.url}-${index}`} className="group relative aspect-square overflow-hidden rounded-xl border border-border bg-white">
+                  <img src={image.url} alt={`Foto ${index + 1}`} className="h-full w-full object-contain p-1" />
                   {index === 0 && (
                     <span className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-[10px] font-bold text-white">
                       Portada

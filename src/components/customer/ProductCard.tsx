@@ -63,9 +63,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="group flex h-full cursor-pointer flex-col overflow-hidden border-2 border-black/10 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-black hover:shadow-[6px_6px_0_0_#facc15] focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
       aria-label={`Ver ${item.name}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100">
+      <div className="relative aspect-square overflow-hidden bg-zinc-100">
         {isMoreSold && (
-          <span className="absolute left-3 top-3 inline-flex items-center gap-1 bg-yellow-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-sm sm:text-[10px]">
+          <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 bg-yellow-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-sm sm:text-[10px]">
             Más vendida
           </span>
         )}
