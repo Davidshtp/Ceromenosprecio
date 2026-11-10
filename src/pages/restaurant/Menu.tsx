@@ -586,6 +586,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
     description: "",
     category_id: "",
     base_price: "",
+    badge_label: "",
     product_images: [] as ProductImage[],
     ingredients: [] as string[],
     is_available: true,
@@ -604,6 +605,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
         description: item.description || "",
         category_id: item.category_id || "",
         base_price: item.base_price.toString(),
+        badge_label: item.badge_label || "",
         product_images:
           item.product_images?.length
             ? item.product_images
@@ -621,6 +623,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
         description: "",
         category_id: "",
         base_price: "",
+        badge_label: "",
         product_images: [],
         ingredients: [],
         is_available: true,
@@ -659,6 +662,7 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
       description: formData.description || undefined,
       category_id: formData.category_id || undefined,
       base_price: parseFloat(formData.base_price),
+      badge_label: formData.badge_label.trim() || null,
       image_url: formData.product_images[0].url,
       product_images: formData.product_images,
       ingredients: formData.ingredients,
@@ -827,6 +831,15 @@ const MenuItemModal: React.FC<MenuItemModalProps> = ({
           }
           placeholder="Describe tu producto..."
           rows={2}
+        />
+
+        <Input
+          label="Etiqueta (opcional)"
+          value={formData.badge_label}
+          onChange={(e) =>
+            setFormData({ ...formData, badge_label: e.target.value })
+          }
+          placeholder="Ej.: Más vendida, Nuevo, Recomendado"
         />
 
         <div className="grid sm:grid-cols-2 gap-4">

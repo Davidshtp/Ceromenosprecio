@@ -11,7 +11,6 @@ interface ProductCardProps {
   onOpen: (item: MenuItem) => void;
   onAdd: (item: MenuItem) => void;
   onRemove: (item: MenuItem) => void;
-  isMoreSold?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -21,7 +20,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onOpen,
   onAdd,
   onRemove,
-  isMoreSold = false,
 }) => {
   const images = useMemo(() => getProductImages(item), [item]);
   const cover = images[0]?.url;
@@ -29,6 +27,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const minPrice = getMenuItemMinPrice({ base_price: item.base_price, sizes: item.sizes });
   const hasSizes = Boolean(item.sizes && item.sizes.length > 0);
   const canAdd = restaurantIsOpen && item.is_available;
+  const badgeLabel = item.badge_label?.trim();
 
   const handleAdd = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
@@ -64,9 +63,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       aria-label={`Ver ${item.name}`}
     >
       <div className="relative aspect-square overflow-hidden bg-zinc-100">
-        {isMoreSold && (
-          <span className="absolute left-3 top-3 z-10 inline-flex items-center gap-1 bg-yellow-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-sm sm:text-[10px]">
-            Más vendida
+        {badgeLabel && (
+          <span className="absolute left-3 top-3 z-10 inline-flex max-w-[calc(100%-1.5rem)] items-center gap-1 truncate bg-yellow-400 px-2.5 py-1 text-[9px] font-black uppercase tracking-wide text-black shadow-sm sm:text-[10px]">
+            {badgeLabel}
           </span>
         )}
         {cover ? (

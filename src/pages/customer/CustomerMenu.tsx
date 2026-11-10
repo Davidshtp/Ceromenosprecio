@@ -59,11 +59,14 @@ const CustomerMenu: React.FC = () => {
   const [featuredCanLeft, setFeaturedCanLeft] = useState(false);
   const [featuredCanRight, setFeaturedCanRight] = useState(false);
   const [featuredActive, setFeaturedActive] = useState(0);
+  const [featuredScrollable, setFeaturedScrollable] = useState(false);
 
   const updateFeaturedScroll = useCallback(() => {
     const el = featuredScrollRef.current;
     if (!el) return;
     const maxScroll = el.scrollWidth - el.clientWidth;
+    const scrollable = maxScroll > 4;
+    setFeaturedScrollable(scrollable);
     setFeaturedCanLeft(el.scrollLeft > 4);
     setFeaturedCanRight(el.scrollLeft < maxScroll - 4);
     const children = Array.from(el.children) as HTMLElement[];
@@ -255,18 +258,29 @@ const CustomerMenu: React.FC = () => {
     [primaryColor, secondaryColor]
   );
 
-  const filteredItems = menuItems.filter((item) => {
-    const matchesSearch = item.name
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      categoryFilter === "all" || item.category_name === categoryFilter;
-    return matchesSearch && matchesCategory && item.is_available;
-  });
+  const filteredItems = useMemo(() => {
+    const items = menuItems.filter((item) => {
+      const matchesSearch = item.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+      const matchesCategory =
+        categoryFilter === "all" || item.category_name === categoryFilter;
+      return matchesSearch && matchesCategory && item.is_available;
+    });
+    return [...items].sort((a, b) => {
+      const aHas = a.badge_label?.trim() ? 1 : 0;
+      const bHas = b.badge_label?.trim() ? 1 : 0;
+      return bHas - aHas;
+    });
+  }, [menuItems, searchTerm, categoryFilter]);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => updateFeaturedScroll());
-    return () => window.cancelAnimationFrame(id);
+    window.addEventListener("resize", updateFeaturedScroll);
+    return () => {
+      window.cancelAnimationFrame(id);
+      window.removeEventListener("resize", updateFeaturedScroll);
+    };
   }, [filteredItems, updateFeaturedScroll]);
 
   const activeItem = selectedItem
@@ -576,8 +590,8 @@ const CustomerMenu: React.FC = () => {
               </div>
               <span className="hidden shrink-0 text-xs font-bold text-black/45 sm:block">{filteredItems.length} {filteredItems.length === 1 ? "producto" : "productos"}</span>
             </div>
-            <div className="relative sm:px-12 lg:px-14">
-              {filteredItems.length > 1 && (
+            <div className={`relative ${featuredScrollable ? "sm:px-12 lg:px-14" : ""}`}>
+              {featuredScrollable && (
                 <>
                   <button
                     type="button"
@@ -605,7 +619,7 @@ const CustomerMenu: React.FC = () => {
                 className="grid grid-cols-1 gap-4 sm:flex sm:snap-x sm:snap-mandatory sm:gap-5 sm:overflow-x-auto sm:scroll-smooth sm:pb-4 sm:scrollbar-hide"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                {filteredItems.map((item, index) => (
+                {filteredItems.map((item) => (
                   <div
                     key={`featured-${item.id}`}
                     className="sm:w-[calc(50%-10px)] sm:shrink-0 sm:snap-start lg:w-[calc(33.333%-14px)]"
@@ -617,12 +631,11 @@ const CustomerMenu: React.FC = () => {
                       onOpen={handleItemClick}
                       onAdd={handleAddSimple}
                       onRemove={(product) => handleRemoveItem(product.id)}
-                      isMoreSold={index === 0}
                     />
                   </div>
                 ))}
               </div>
-              {filteredItems.length > 1 && (
+              {featuredScrollable && (
                 <div className="mt-5 hidden items-center justify-center gap-3 sm:flex">
                   {filteredItems.map((item, index) => (
                     <button
