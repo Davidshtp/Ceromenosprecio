@@ -23,7 +23,7 @@ import {
   updateMenuCategory,
   deleteMenuCategory,
 } from "../../services/restaurantService";
-import type { MenuItem, ProductImage } from "../../config/supabase";
+import type { MenuItem, MenuCategory, ProductImage } from "../../config/supabase";
 import { ProductWeight } from "../../components/ui/ProductWeight";
 import { ProductLabel } from "../../components/ui/ProductLabel";
 import { formatCurrency, getStoredRestaurantId } from "../../utils/helpers";
@@ -36,7 +36,7 @@ import {
 const Menu: React.FC = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<
-    { id: string; name: string }[]
+    Pick<MenuCategory, "id" | "name" | "type">[]
   >([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +46,7 @@ const Menu: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<Pick<MenuCategory, "id" | "name" | "type"> | null>(null);
   const [showEditCategoryModal, setShowEditCategoryModal] = useState(false);
   const [showDeleteCategoryModal, setShowDeleteCategoryModal] = useState(false);
 
@@ -397,7 +397,7 @@ interface CategoryModalProps {
   isOpen: boolean;
   restaurantId: string;
   onClose: () => void;
-  onCreated: (category: { id: string; name: string }) => void;
+  onCreated: (category: Pick<MenuCategory, "id" | "name" | "type">) => void;
 }
 
 const CategoryModal: React.FC<CategoryModalProps> = ({
@@ -407,6 +407,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
   onCreated,
 }) => {
   const [name, setName] = useState("");
+  const [type, setType] = useState<MenuCategory["type"]>("food");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -421,6 +422,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     const result = await createMenuCategory({
       restaurant_id: restaurantId,
       name: name.trim(),
+      type,
     });
     setLoading(false);
 
@@ -430,6 +432,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
     }
 
     setName("");
+    setType("food");
     onCreated(result.data);
   };
 
@@ -443,6 +446,14 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
           onChange={(event) => setName(event.target.value)}
           placeholder="Ej.: Hamburguesas"
           required
+        />
+        <Select
+          id="new-category-type"
+          required
+          label="Tipo de categoría"
+          value={type}
+          onChange={(event) => setType(event.target.value as MenuCategory["type"])}
+          options={[{ value: "food", label: "Comida" }, { value: "drink", label: "Bebida" }]}
         />
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={onClose}>
@@ -459,9 +470,9 @@ const CategoryModal: React.FC<CategoryModalProps> = ({
 
 interface CategoryEditModalProps {
   isOpen: boolean;
-  category: { id: string; name: string } | null;
+  category: Pick<MenuCategory, "id" | "name" | "type"> | null;
   onClose: () => void;
-  onUpdated: (category: { id: string; name: string }) => void;
+  onUpdated: (category: Pick<MenuCategory, "id" | "name" | "type">) => void;
 }
 
 const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
@@ -471,12 +482,14 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
   onUpdated,
 }) => {
   const [name, setName] = useState("");
+  const [type, setType] = useState<MenuCategory["type"]>("food");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setName(category?.name || "");
+    setType(category?.type || "food");
     setError("");
   }, [category, isOpen]);
 
@@ -487,7 +500,7 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
       return;
     }
     setLoading(true);
-    const result = await updateMenuCategory(category.id, name);
+    const result = await updateMenuCategory(category.id, name, type);
     setLoading(false);
     if (result.error || !result.data) {
       setError(result.error?.message || "No se pudo actualizar la categoría.");
@@ -506,6 +519,15 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
           onChange={(event) => setName(event.target.value)}
           required
         />
+        <Select
+          id="edit-category-type"
+          required
+          label="Tipo de categoría"
+          value={type}
+          onChange={(event) => setType(event.target.value as MenuCategory["type"])}
+          options={[{ value: "food", label: "Comida" }, { value: "drink", label: "Bebida" }]}
+        />
+        <p className="text-xs text-text-secondary">Las bebidas aparecen en su propia sección y como recomendaciones para acompañar las comidas.</p>
         <div className="flex gap-3">
           <Button type="button" variant="outline" onClick={onClose} fullWidth>
             Cancelar
@@ -521,7 +543,7 @@ const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
 
 interface DeleteCategoryModalProps {
   isOpen: boolean;
-  category: { id: string; name: string } | null;
+  category: Pick<MenuCategory, "id" | "name" | "type"> | null;
   onClose: () => void;
   onDeleted: (categoryId: string) => void;
 }
@@ -577,7 +599,7 @@ interface MenuItemModalProps {
   item?: MenuItem | null;
   onClose: () => void;
   mode: "add" | "edit";
-  categories: { id: string; name: string }[];
+  categories: Pick<MenuCategory, "id" | "name" | "type">[];
 }
 
 const MenuItemModal: React.FC<MenuItemModalProps> = ({

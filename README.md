@@ -75,6 +75,23 @@ database/Database.sql              # Esquema de referencia
 
 ## Base de datos
 
+### Secciones de comidas y bebidas
+
+Antes de desplegar esta versión, ejecuta `database/migrations/20261110_menu_category_type.sql`
+en el editor SQL de Supabase. Añade el tipo de categoría (`food` o `drink`) y habilita
+la sincronización de categorías en la publicación Realtime existente. No elimina productos
+ni modifica pedidos; las categorías existentes quedan como comida.
+
+Después, en **Menú → editar categoría**, selecciona **Bebida** para las categorías de
+gaseosas, jugos, etc. También puedes crear categorías nuevas con ese tipo.
+El menú completo muestra platos primero y bebidas después. El detalle de una comida
+recomienda hasta cuatro bebidas disponibles, que se agregan por separado al carrito;
+las presentaciones y adicionales se eligen en la recomendación. Agregar una bebida
+no agrega automáticamente el plato ni cierra su detalle.
+
+Verificación de filtros y clasificación (Node.js 22.18+):
+`node --test tests/menuCatalog.test.mjs`.
+
 Para habilitar el peso aproximado opcional de los productos en una base existente, ejecuta
 `database/migrations/20261110_menu_item_approximate_weight.sql` en el editor SQL de Supabase
 antes de desplegar el frontend. Agrega una columna nullable sin modificar los productos existentes.

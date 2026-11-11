@@ -62,6 +62,7 @@ export interface MenuItem {
   restaurant_id: string;
   category_id?: string;
   category_name?: string;
+  category_type?: "food" | "drink";
   name: string;
   description?: string;
   base_price: number;
@@ -110,6 +111,7 @@ export interface UpdateMenuItemInput {
 export interface CreateMenuCategoryInput {
   restaurant_id: string;
   name: string;
+  type: "food" | "drink";
 }
 
 export interface ProductImage {
@@ -121,6 +123,7 @@ export interface MenuCategory {
   id: string;
   restaurant_id: string;
   name: string;
+  type: "food" | "drink";
   description?: string;
   display_order: number;
   is_active: boolean;

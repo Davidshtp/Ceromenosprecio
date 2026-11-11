@@ -28,6 +28,7 @@ CREATE TABLE public.menu_categories (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   restaurant_id uuid NOT NULL,
   name text NOT NULL,
+  type text NOT NULL DEFAULT 'food' CHECK (type IN ('food', 'drink')),
   display_order integer NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),

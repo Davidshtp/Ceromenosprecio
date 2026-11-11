@@ -136,7 +136,7 @@ export const subscribeToMenuItems = (
   const fetchItems = async () => {
     const { data, error } = await supabase
       .from("menu_items")
-      .select("*, menu_categories(name)")
+      .select("*, menu_categories(name, type)")
       .eq("restaurant_id", restaurantId)
       .order("created_at", { ascending: false });
 
@@ -149,6 +149,7 @@ export const subscribeToMenuItems = (
         (data || []).map((item) => ({
           ...item,
           category_name: item.menu_categories?.name,
+          category_type: item.menu_categories?.type ?? "food",
           menu_categories: undefined,
         }))
       );
@@ -170,6 +171,11 @@ export const subscribeToMenuItems = (
       () => {
         void fetchItems();
       }
+    )
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "menu_categories", filter: `restaurant_id=eq.${restaurantId}` },
+      () => { void fetchItems(); }
     )
     .subscribe((status, error) => {
       if (
@@ -262,10 +268,10 @@ export const createMenuCategory = async (
   return { data: data as MenuCategory | null, error };
 };
 
-export const updateMenuCategory = async (categoryId: string, name: string) => {
+export const updateMenuCategory = async (categoryId: string, name: string, type: "food" | "drink") => {
   const { data, error } = await supabase
     .from("menu_categories")
-    .update({ name: name.trim() })
+    .update({ name: name.trim(), type })
     .eq("id", categoryId)
     .select()
     .single();

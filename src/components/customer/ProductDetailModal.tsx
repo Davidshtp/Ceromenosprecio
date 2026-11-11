@@ -7,8 +7,11 @@ import { getMenuItemMinPrice, getProductImages } from "../../utils/menuItem";
 import { ProductGallery } from "./ProductGallery";
 import { ProductWeight } from "../ui/ProductWeight";
 import { ProductLabel } from "../ui/ProductLabel";
+import { DrinkRecommendation } from "./DrinkRecommendation";
 
 interface ProductDetailModalProps {
+  recommendedDrinks?: MenuItem[];
+  onAddDrink?: (drink: MenuItem, size: MenuItemOption | undefined, addons: MenuItemOption[], quantity: number) => void;
   item: MenuItem;
   isOpen: boolean;
   restaurantIsOpen: boolean;
@@ -27,12 +30,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   restaurantIsOpen,
   onClose,
   onAdd,
+  recommendedDrinks = [],
+  onAddDrink,
 }) => {
   const [selectedSizeName, setSelectedSizeName] = useState<string | null>(
     item.sizes && item.sizes.length > 0 ? item.sizes[0].name : null
   );
   const [selectedAddonNames, setSelectedAddonNames] = useState<string[]>([]);
   const [quantity, setQuantity] = useState(1);
+  const [expandedDrinkId, setExpandedDrinkId] = useState<string | null>(null);
 
   const images = useMemo(() => getProductImages(item), [item]);
 
@@ -54,7 +60,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     );
   };
 
-  const unitPrice = (Number(selectedSize?.price) || Number(item.base_price) || 0) + selectedAddons.reduce((sum, addon) => sum + (Number(addon.price) || 0), 0);
+  const unitPrice = (Number(selectedSize?.price ?? item.base_price) || 0) + selectedAddons.reduce((sum, addon) => sum + (Number(addon.price) || 0), 0);
   const total = unitPrice * quantity;
 
   const canAdd = restaurantIsOpen && item.is_available && quantity > 0;
@@ -208,6 +214,30 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         </button>
                       );
                     })}
+                  </div>
+                </section>
+              )}
+              {item.category_type !== "drink" && recommendedDrinks.length > 0 && onAddDrink && (
+                <section className="border-t-2 border-black/10 pt-5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="border-l-4 border-yellow-400 pl-2 text-sm font-black uppercase tracking-wide text-black">Acompáñala con una bebida</h3>
+                    <span className="border border-black/20 bg-zinc-50 px-2 py-1 text-[9px] font-black uppercase tracking-wide text-black/55">Sugerencia opcional</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-black/60">No es obligatorio agregar una bebida. Si quieres una, tócala para ver sus presentaciones y precios.</p>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    {recommendedDrinks.filter((drink) => drink.is_available).map((drink) => (
+                      <DrinkRecommendation
+                        key={drink.id}
+                        drink={drink}
+                        disabled={!restaurantIsOpen}
+                        expanded={expandedDrinkId === drink.id}
+                        onToggle={() => setExpandedDrinkId((current) => current === drink.id ? null : drink.id)}
+                        onAdd={(selectedDrink, size, addons, drinkQuantity) => {
+                          onAddDrink(selectedDrink, size, addons, drinkQuantity);
+                          setExpandedDrinkId(null);
+                        }}
+                      />
+                    ))}
                   </div>
                 </section>
               )}

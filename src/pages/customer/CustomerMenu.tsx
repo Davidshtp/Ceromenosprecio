@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Instagram,
+  Clock3,
+  ArrowUpRight,
 } from "lucide-react";
 import { Card, Button, Input, Modal } from "../../components/ui";
 import { subscribeToMenuItems, createOrder } from "../../services/restaurantService";
@@ -28,6 +30,8 @@ import type {
 import { formatCurrency, isValidPhone } from "../../utils/helpers";
 import { supabase } from "../../config/supabase";
 import { getAddonsKey } from "../../utils/menuItem";
+import { getCatalogSections, getCatalogSubcategories } from "../../utils/menuCatalog";
+import type { CatalogFilter } from "../../utils/menuCatalog";
 import { ProductCard } from "../../components/customer/ProductCard";
 import { ProductDetailModal } from "../../components/customer/ProductDetailModal";
 import { toast } from "sonner";
@@ -47,7 +51,8 @@ const CustomerMenu: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [categoryFilter, setCategoryFilter] = useState<CatalogFilter>("all");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("");
   const [settings, setSettings] = useState<RestaurantSettings | null>(null);
   const [hours, setHours] = useState<RestaurantHours[]>([]);
   const [showCart, setShowCart] = useState(false);
@@ -63,7 +68,12 @@ const CustomerMenu: React.FC = () => {
 
   const updateFeaturedScroll = useCallback(() => {
     const el = featuredScrollRef.current;
-    if (!el) return;
+    if (!el) {
+      setFeaturedScrollable(false);
+      setFeaturedCanLeft(false);
+      setFeaturedCanRight(false);
+      return;
+    }
     const maxScroll = el.scrollWidth - el.clientWidth;
     const scrollable = maxScroll > 4;
     setFeaturedScrollable(scrollable);
@@ -179,10 +189,13 @@ const CustomerMenu: React.FC = () => {
     }
   }, [restaurant]);
 
-  const categories = [
-    "all",
-    ...new Set(menuItems.map((item) => item.category_name).filter(Boolean)),
+  const categories: { value: CatalogFilter; label: string }[] = [
+    { value: "all", label: "Menú completo" },
+    { value: "food", label: "Platos" },
+    { value: "drink", label: "Bebidas" },
   ];
+  const subcategories = useMemo(() => getCatalogSubcategories(menuItems, categoryFilter), [menuItems, categoryFilter]);
+  const activeSubcategory = subcategories.some((category) => category.id === subcategoryFilter) ? subcategoryFilter : "";
 
   const isOpenNow = () => {
     if (settings?.is_temporarily_closed === true) return false;
@@ -258,21 +271,11 @@ const CustomerMenu: React.FC = () => {
     [primaryColor, secondaryColor]
   );
 
-  const filteredItems = useMemo(() => {
-    const items = menuItems.filter((item) => {
-      const matchesSearch = item.name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      const matchesCategory =
-        categoryFilter === "all" || item.category_name === categoryFilter;
-      return matchesSearch && matchesCategory && item.is_available;
-    });
-    return [...items].sort((a, b) => {
-      const aHas = a.badge_label?.trim() ? 1 : 0;
-      const bHas = b.badge_label?.trim() ? 1 : 0;
-      return bHas - aHas;
-    });
-  }, [menuItems, searchTerm, categoryFilter]);
+  const { foodItems, drinkItems } = useMemo(
+    () => getCatalogSections(menuItems, searchTerm, categoryFilter, activeSubcategory),
+    [menuItems, searchTerm, categoryFilter, activeSubcategory]
+  );
+  const recommendedDrinks = menuItems.filter((item) => item.category_type === "drink" && item.is_available);
 
   useEffect(() => {
     const id = window.requestAnimationFrame(() => updateFeaturedScroll());
@@ -281,7 +284,7 @@ const CustomerMenu: React.FC = () => {
       window.cancelAnimationFrame(id);
       window.removeEventListener("resize", updateFeaturedScroll);
     };
-  }, [filteredItems, updateFeaturedScroll]);
+  }, [foodItems, updateFeaturedScroll]);
 
   const activeItem = selectedItem
     ? menuItems.find((item) => item.id === selectedItem.id) ?? selectedItem
@@ -291,14 +294,15 @@ const CustomerMenu: React.FC = () => {
     item: MenuItem,
     selectedSize?: MenuItemOption,
     selectedAddons: MenuItemOption[] = [],
-    quantity = 1
+    quantity = 1,
+    closeDetail = true
   ) => {
     if (!restaurantIsOpen || !item.is_available || quantity < 1) {
       return;
     }
 
     const unitPrice =
-      (Number(selectedSize?.price) || Number(item.base_price) || 0) +
+      (Number(selectedSize?.price ?? item.base_price) || 0) +
       (Array.isArray(selectedAddons)
         ? selectedAddons.reduce((sum, addon) => sum + (Number(addon.price) || 0), 0)
         : 0);
@@ -330,8 +334,10 @@ const CustomerMenu: React.FC = () => {
       return [...current, cartItem];
     });
 
-    setShowItemModal(false);
-    setSelectedItem(null);
+    if (closeDetail) {
+      setShowItemModal(false);
+      setSelectedItem(null);
+    }
     toast.success("Agregado al carrito");
   };
 
@@ -440,10 +446,15 @@ const CustomerMenu: React.FC = () => {
           </nav>
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <span className="hidden items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-2 text-[10px] font-bold sm:inline-flex">
-              <span className={`h-2 w-2 rounded-full ${restaurantIsOpen ? "bg-emerald-400" : "bg-red-400"}`} />
+            <button
+              type="button"
+              onClick={() => setShowHoursModal(true)}
+              aria-label={`${restaurantIsOpen ? "Abierto ahora" : "Cerrado"}. Ver horarios`}
+              className={`hidden min-h-10 items-center gap-2 border-2 px-3 py-2 text-[10px] font-black uppercase tracking-wide transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-yellow-400 sm:inline-flex ${restaurantIsOpen ? "border-yellow-400 bg-yellow-400 text-black shadow-[3px_3px_0_0_#fff] hover:bg-yellow-300" : "border-white/60 bg-white/5 text-white shadow-[3px_3px_0_0_#facc15] hover:bg-white/15"}`}
+            >
+              {restaurantIsOpen ? <Store aria-hidden="true" className="h-4 w-4" /> : <Clock3 aria-hidden="true" className="h-4 w-4 text-yellow-400" />}
               {restaurantIsOpen ? "Abierto ahora" : "Cerrado"}
-            </span>
+            </button>
             <button type="button" onClick={() => setShowHoursModal(true)} aria-label="Ver horarios" className="flex h-9 items-center justify-center rounded-full border border-white/20 px-3 text-[10px] font-black uppercase tracking-wide text-white transition hover:border-yellow-400 hover:bg-yellow-400 hover:text-black md:hidden">
               Horarios
             </button>
@@ -471,10 +482,22 @@ const CustomerMenu: React.FC = () => {
         <div aria-hidden="true" className="pointer-events-none absolute bottom-0 left-0 h-2 w-2/5 bg-yellow-400" />
         <div className="mx-auto grid max-w-7xl items-center gap-7 px-4 py-8 sm:px-6 sm:py-12 md:grid-cols-[1.02fr_0.98fr] md:gap-10 md:py-16 lg:px-8 lg:py-20">
           <div className="relative order-2 z-10 md:order-1">
-            <div className="mb-5 inline-flex items-center gap-2 border border-yellow-400/40 bg-yellow-400/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-300 sm:text-xs">
-              <span className={`h-2 w-2 rounded-full ${restaurantIsOpen ? "bg-emerald-400" : "bg-red-400"}`} />
-              {restaurantIsOpen ? "El antojo está abierto" : "Volvemos pronto"}
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowHoursModal(true)}
+              aria-label={`${restaurantIsOpen ? "Restaurante abierto" : "Restaurante cerrado"}. Ver horarios`}
+              className="group mb-6 inline-flex max-w-full items-center gap-3 border-2 border-yellow-400 bg-black p-2 pr-3 text-left shadow-[4px_4px_0_0_#facc15] transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white motion-reduce:transform-none motion-reduce:transition-none sm:pr-4"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center bg-yellow-400 text-black">
+                {restaurantIsOpen ? <Store aria-hidden="true" className="h-5 w-5" /> : <Clock3 aria-hidden="true" className="h-5 w-5" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[9px] font-black uppercase tracking-[0.16em] text-white/55">{restaurantIsOpen ? "Abierto ahora" : "Restaurante cerrado"}</span>
+                <span className="mt-0.5 block break-words text-xs font-black uppercase leading-tight tracking-wide text-yellow-400 sm:text-sm">{restaurantIsOpen ? "¡El antojo está abierto!" : "Volvemos pronto"}</span>
+                <span className="mt-1 block text-[9px] font-bold text-white/65">Ver horarios</span>
+              </span>
+              <ArrowUpRight aria-hidden="true" className="ml-1 h-4 w-4 shrink-0 text-yellow-400 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+            </button>
             <h1 className="max-w-3xl text-[clamp(2.7rem,8vw,5.8rem)] font-black uppercase leading-[0.88] tracking-[-0.065em]">
               AQUÍ NO SE LE
               <span className="mt-1 block text-yellow-400">TACAÑEA</span>
@@ -548,7 +571,7 @@ const CustomerMenu: React.FC = () => {
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-black/45" />
             <input
               type="text"
-              placeholder="Buscar salchipapas ..."
+              placeholder="Buscar platos o bebidas..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               aria-label="Buscar productos"
@@ -557,38 +580,59 @@ const CustomerMenu: React.FC = () => {
           </div>
         </div>
 
-        <div className="-mx-4 mb-9 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide sm:mx-0 sm:px-0">
+        <div role="group" aria-label="Tipo de producto" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-2 scrollbar-hide sm:mx-0 sm:px-0">
           {categories.map((category) => (
             <button
-              key={category}
+              key={category.value}
               type="button"
-              onClick={() => setCategoryFilter(category || "all")}
+              onClick={() => { setCategoryFilter(category.value); setSubcategoryFilter(""); }}
+              aria-pressed={categoryFilter === category.value}
               className={`min-h-10 shrink-0 border-2 px-5 py-2 text-xs font-black uppercase tracking-wide transition ${
-                categoryFilter === category
+                categoryFilter === category.value
                   ? "border-black bg-black text-white"
                   : "border-black/15 bg-white text-black/65 hover:border-black hover:text-black"
               }`}
             >
-              {category === "all" ? "Todos" : category}
+              {category.label}
             </button>
           ))}
         </div>
 
-        {filteredItems.length === 0 ? (
+        <div className="mb-8">
+          {categoryFilter !== "all" && subcategories.length > 0 && (
+            <div className="border-l-4 border-yellow-400 pl-3">
+              <p className="mb-2 text-[9px] font-black uppercase tracking-[0.14em] text-black/45">
+                {categoryFilter === "food" ? "Categorías de platos" : "Categorías de bebidas"}
+              </p>
+              <div role="group" aria-label={categoryFilter === "food" ? "Subcategorías de platos" : "Subcategorías de bebidas"} className="flex flex-wrap gap-2">
+                {[{ id: "", name: categoryFilter === "food" ? "Todos los platos" : "Todas las bebidas" }, ...subcategories].map((category) => (
+                  <button key={category.id} type="button" onClick={() => setSubcategoryFilter(category.id)}
+                    aria-pressed={activeSubcategory === category.id}
+                    className={`min-h-11 max-w-full break-words border px-3 py-2 text-left text-[11px] font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${activeSubcategory === category.id ? "border-black bg-yellow-400 text-black" : "border-black/15 bg-white text-black/60 hover:border-black hover:text-black"}`}>
+                    {category.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {foodItems.length + drinkItems.length === 0 ? (
           <div className="border-2 border-dashed border-black/15 px-5 py-14 text-center">
             <Utensils className="h-9 w-9" aria-hidden="true" />
             <h3 className="mt-4 text-xl font-black uppercase">No encontramos esa grosería</h3>
             <p className="mt-2 text-sm text-black/55">Prueba con otra búsqueda o selecciona otra categoría.</p>
-            <button type="button" onClick={() => { setSearchTerm(""); setCategoryFilter("all"); }} className="mt-5 bg-black px-5 py-3 text-xs font-black uppercase text-white transition hover:bg-yellow-400 hover:text-black">Ver todos los productos</button>
+            <button type="button" onClick={() => { setSearchTerm(""); setCategoryFilter("all"); setSubcategoryFilter(""); }} className="mt-5 bg-black px-5 py-3 text-xs font-black uppercase text-white transition hover:bg-yellow-400 hover:text-black">Ver todos los productos</button>
           </div>
         ) : (
           <>
+            {foodItems.length > 0 && <section aria-label="Nuestros platos">
             <div className="mb-5 flex items-end justify-between gap-4">
               <div>
                 <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-600">La casa recomienda</p>
                 <h3 className="text-2xl font-black uppercase leading-none tracking-tight sm:text-3xl">LAS MÁS GROSERAS <span className="text-yellow-500">DE LA CASA</span></h3>
               </div>
-              <span className="hidden shrink-0 text-xs font-bold text-black/45 sm:block">{filteredItems.length} {filteredItems.length === 1 ? "producto" : "productos"}</span>
+              <span className="hidden shrink-0 text-xs font-bold text-black/45 sm:block">{foodItems.length} {foodItems.length === 1 ? "plato" : "platos"}</span>
             </div>
             <div className={`relative ${featuredScrollable ? "sm:px-12 lg:px-14" : ""}`}>
               {featuredScrollable && (
@@ -619,7 +663,7 @@ const CustomerMenu: React.FC = () => {
                 className="grid grid-cols-1 gap-4 sm:flex sm:snap-x sm:snap-mandatory sm:gap-5 sm:overflow-x-auto sm:scroll-smooth sm:pb-4 sm:scrollbar-hide"
                 style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
               >
-                {filteredItems.map((item) => (
+                {foodItems.map((item) => (
                   <div
                     key={`featured-${item.id}`}
                     className="sm:w-[calc(50%-10px)] sm:shrink-0 sm:snap-start lg:w-[calc(33.333%-14px)]"
@@ -637,7 +681,7 @@ const CustomerMenu: React.FC = () => {
               </div>
               {featuredScrollable && (
                 <div className="mt-5 hidden items-center justify-center gap-3 sm:flex">
-                  {filteredItems.map((item, index) => (
+                  {foodItems.map((item, index) => (
                     <button
                       key={`featured-dot-${item.id}`}
                       type="button"
@@ -653,6 +697,19 @@ const CustomerMenu: React.FC = () => {
                 </div>
               )}
             </div>
+            </section>}
+            {drinkItems.length > 0 && (
+              <section aria-labelledby="drinks-heading" className={foodItems.length > 0 ? "mt-12 border-t-4 border-yellow-400 pt-8" : ""}>
+                <p className="mb-1 text-[10px] font-black uppercase tracking-[0.18em] text-yellow-600">El complemento perfecto</p>
+                <h3 id="drinks-heading" className="mb-5 text-2xl font-black uppercase tracking-tight sm:text-3xl">Bebidas <span className="text-yellow-500">para acompañar</span></h3>
+                <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 sm:gap-5">
+                  {drinkItems.map((item) => (
+                    <ProductCard key={item.id} item={item} quantity={getItemQuantity(item.id)} restaurantIsOpen={restaurantIsOpen}
+                      onOpen={handleItemClick} onAdd={handleAddSimple} onRemove={(product) => handleRemoveItem(product.id)} />
+                  ))}
+                </div>
+              </section>
+            )}
           </>
         )}
       </section>
@@ -738,6 +795,8 @@ const CustomerMenu: React.FC = () => {
             setSelectedItem(null);
           }}
           onAdd={addToCart}
+          recommendedDrinks={activeItem.category_type !== "drink" ? recommendedDrinks : []}
+          onAddDrink={(drink, size, addons, quantity) => addToCart(drink, size, addons, quantity, false)}
         />
       )}
 
