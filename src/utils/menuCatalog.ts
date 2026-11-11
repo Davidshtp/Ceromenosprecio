@@ -2,6 +2,13 @@ import type { MenuItem } from "../config/supabase";
 
 export type CatalogFilter = "all" | "food" | "drink";
 
+export const getHeroMenuItems = (menuItems: MenuItem[]) => menuItems.filter((item) =>
+  item.is_available && item.category_type !== "drink" &&
+  (item.product_images?.some((image) => Boolean(image.url?.trim())) || Boolean(item.image_url?.trim()))
+).sort((a, b) => Number(Boolean(b.badge_label?.trim())) - Number(Boolean(a.badge_label?.trim()))).slice(0, 5);
+
+export const getHeroMenuItem = (menuItems: MenuItem[]) => getHeroMenuItems(menuItems)[0];
+
 export const getCatalogSubcategories = (menuItems: MenuItem[], filter: CatalogFilter) => {
   if (filter === "all") return [];
   const categories = new Map<string, { id: string; name: string }>();
